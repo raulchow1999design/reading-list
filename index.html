@@ -626,22 +626,96 @@ body {
 <script>
 // ─── Data Layer ───
 const STORAGE_KEY = 'rl2_books';
+const FILES_DB = 'rl2_files_db';
 let books = [];
 let editingId = null;
 let currentBookId = null;
-let _editCategories = [];
-let _editFiles = [];
-let _editRating = 0;
 
-let currentFilter = 'all';
-let currentCategory = null;
-let noteSearchQuery = '';
+// IndexedDB for file blobs (large files)
+let filesDB = null;
+function getFilesDB(){
+  if(filesDB) return Promise.resolve(filesDB);
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(FILES_DB,1);
+    req.onupgradeneeded=function(e){
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('files')) db.createObjectStore('files');
+    };
+    req.onsuccess=function(e){ filesDB=e.target.result; resolve(filesDB); };
+    req.onerror=function(e){ reject(e); };
+  });
+}
+
+async function saveFileToDB(fileId, dataUrl){
+  const db=await getFilesDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('files','readwrite');
+    tx.objectStore('files').put(dataUrl,fileId);
+    tx.oncomplete=resolve; tx.onerror=reject;
+  });
+}
+
+async function loadFileFromDB(fileId){
+  const db=await getFilesDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('files','readonly');
+    const req=tx.objectStore('files').get(fileId);
+    req.onsuccess=function(){ resolve(req.result); };
+    req.onerror=function(){ reject(); };
+  });
+}
+
+async function deleteFileFromDB(fileId){
+  const db=await getFilesDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('files','readwrite');
+    tx.objectStore('files').delete(fileId);
+    tx.oncomplete=resolve; tx.onerror=reject;
+  });
+}
 
 function loadBooks() {
   try { books = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch(e) { books = []; }
+  // Strip dataUrl from books in memory — load from IndexedDB on demand
+  books.forEach(b=>{
+    (b.localFiles||[]).forEach(f=>{
+      if(f._dbId) f.dataUrl=null; // will be loaded on demand
+    });
+  });
 }
-function saveBooks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(books)); }
+
+async function hydrateBookFiles(b){
+  // Load file dataUrls from IndexedDB
+  if(!b.localFiles) return;
+  for(let f of b.localFiles){
+    if(f._dbId && !f.dataUrl){
+      try{ f.dataUrl=await loadFileFromDB(f._dbId); }catch(e){}
+    }
+  }
+}
+
+function saveBooks() {
+  // Save metadata to localStorage (strip large dataUrls)
+  const clean=books.map(b=>({...b, localFiles:(b.localFiles||[]).map(f=>({...f, dataUrl:undefined})) }));
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(clean)); }
+  catch(e) {
+    console.error('localStorage save failed:',e);
+    toast('⚠️ 数据过大，存储失败。请清理部分文件后重试。');
+  }
+}
+
+async function saveBookFiles(b){
+  // Save file dataUrls to IndexedDB
+  if(!b.localFiles) return;
+  for(let i=0;i<b.localFiles.length;i++){
+    const f=b.localFiles[i];
+    if(f.dataUrl && f.dataUrl.length>100000){ // Only store large files in IDB
+      if(!f._dbId) f._dbId=b.id+'_file_'+i;
+      await saveFileToDB(f._dbId, f.dataUrl);
+    }
+  }
+}
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 
 function toast(msg) {
@@ -819,9 +893,10 @@ function renderBooks() {
 }
 
 // ─── Reading View ───
-function openReadingView(bookId) {
+async function openReadingView(bookId) {
   const b=books.find(bk=>bk.id===bookId);
   if (!b) return;
+  await hydrateBookFiles(b);
   currentBookId=bookId;
   b.lastReadAt=new Date().toISOString();
   saveBooks();
@@ -1178,7 +1253,8 @@ function handleFileUpload(e) {
   const files=Array.from(e.target.files||[]);
   files.forEach(f=>{
     if(!f.name.toLowerCase().endsWith('.docx')&&!f.name.toLowerCase().endsWith('.pdf')){toast('仅支持 .docx 和 .pdf');return;}
-    if(f.size>50*1024*1024){toast('文件过大（最大50MB）');return;}
+    if(f.size>200*1024*1024){toast('文件过大（最大200MB）');return;}
+    if(f.size>30*1024*1024) toast('⏳ 大文件，处理中…');
     const reader=new FileReader();
     reader.onload=function(ev){
       _editFiles.push({name:f.name,type:f.type||'application/octet-stream',size:f.size,dataUrl:ev.target.result});
