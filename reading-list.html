@@ -28,7 +28,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden;
-  -webkit-font-smoothing: antialiased; -webkit-user-select:none; user-select:none;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ─── Sidebar ─── */
@@ -314,8 +314,8 @@ body {
 
 /* ─── Annotation Toolbar ─── */
 .annotation-toolbar {
-  position:sticky; top:10px; display:flex; gap:5px;
-  z-index:50; opacity:0.45; transition:opacity 0.2s; margin-left:auto;
+  position:fixed; top:60px; right:20px; display:flex; gap:5px;
+  z-index:50; opacity:0.45; transition:opacity 0.2s;
   width:fit-content;
   background:rgba(255,255,255,0.75); border-radius:20px; padding:6px 5px;
   backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
