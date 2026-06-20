@@ -254,7 +254,7 @@ body {
 
 .sticky-note-item {
   padding:12px; border-radius:var(--radius-sm); position:relative;
-  font-size:13px; line-height:1.5; min-height:60px;
+  font-size:13px; line-height:1.5; min-height:60px; flex-shrink:0;
   cursor:pointer; transition:all 0.15s; border:1px solid rgba(0,0,0,0.06);
   word-break:break-word;
 }
@@ -528,7 +528,7 @@ body {
   <div class="reading-toolbar">
     <button class="back-btn" onclick="closeReading()">← 返回书单</button>
     <h3 id="readingTitle">阅读中…</h3>
-    <div class="page-nav" id="pageNav">
+    <div class="page-nav" id="pageNav" style="display:none;">
       <button onclick="changePage(-1)" title="上一页">◀</button>
       <input type="number" id="pageInput" value="1" min="1" onchange="goToPage()">
       <span id="pageTotal">/ ?</span>
@@ -560,7 +560,7 @@ body {
     </div>
     <div class="notes-panel" id="notesPanel">
       <div class="notes-panel-header">
-        <h4>📝 便签笔记</h4>
+        <h4>📝 全部便签 · 可滚动</h4>
         <button onclick="addNoteFromPanel()" title="新建便签">＋</button>
         <button onclick="toggleNotesPanel()" title="折叠">◀</button>
       </div>
@@ -974,21 +974,28 @@ function renderStickyOverlays(b) {
   const currentPage=parseInt(document.getElementById('pageInput').value)||1;
   const pdfContainer=document.getElementById('stickyContainer');
 
+  // Show pageNav for DOCX, hide for PDF
+  const pageNav=document.getElementById('pageNav');
+  if(pageNav){
+    pageNav.style.display=isPDF?'none':(pageNav.style.display||'flex');
+  }
+
   if(isPDF){
-    pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:50px;align-items:flex-start;';
+    // PDF mode: nice notebook view below the document
+    pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:60px;align-items:flex-start;max-height:220px;overflow-y:auto;';
     pdfContainer.innerHTML='';
     const pageNotes=(b.stickyNotes||[]).filter(n=>n.pageNumber===currentPage);
     const pageLabel=document.createElement('div');
-    pageLabel.style.cssText='width:100%;font-size:12px;color:var(--text-secondary);margin-bottom:2px;';
-    pageLabel.textContent=pageNotes.length?`📝 第 ${currentPage} 页 · ${pageNotes.length} 张便签`:`第 ${currentPage} 页 · 暂无便签`;
+    pageLabel.style.cssText='width:100%;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;';
+    pageLabel.innerHTML=`📒 便签笔记本 · 第 ${currentPage} 页${pageNotes.length?' · '+pageNotes.length+' 张便签':' · 暂无便签'}`;
     pdfContainer.appendChild(pageLabel);
     pageNotes.forEach(note=>{
       const ed=document.createElement('div');
       ed.className='sticky-overlay note-color-'+(note.color||'yellow')+(note.isTransparent?' transparent':'');
-      ed.style.cssText='position:relative;display:inline-flex;flex-direction:column;margin:4px;min-width:140px;max-width:220px;';
+      ed.style.cssText='position:relative;display:inline-flex;flex-direction:column;margin:4px;min-width:140px;max-width:220px;flex-shrink:0;';
       ed.setAttribute('data-note-id',note.id);
       ed.innerHTML=`
-        <div class="sticky-page-tag">p.${note.pageNumber||1}</div>
+        <div class="sticky-page-tag">📄 p.${note.pageNumber||1}</div>
         <div class="sticky-text">${(note.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
         <div class="sticky-actions">
           <button onclick="toggleStickyTransparent('${note.id}')">${note.isTransparent?'👁':'👻'}</button>
