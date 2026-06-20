@@ -323,6 +323,10 @@ body {
   box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid rgba(0,0,0,0.04);
 }
 .annotation-toolbar:hover { opacity:1; }
+
+/* Hide toolbar when reading view is not active */
+.reading-view:not(.active) .annotation-toolbar { display:none !important; }
+
 .ann-btn {
   width:34px; height:34px; border-radius:50%; border:1px solid var(--border);
   background:rgba(255,255,255,0.9); cursor:pointer; font-size:17px; display:flex;
