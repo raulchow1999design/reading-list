@@ -1210,6 +1210,8 @@ function goToPage() {
 function closeReading() {
   document.getElementById('readingView').classList.remove('active');
   document.getElementById('mainGrid').style.display='flex';
+  window._selAnn=null;
+  document.querySelectorAll('.ann-mark').forEach(function(s){s.style.outline='';});
   currentBookId=null;
   renderSidebar(); renderBooks();
 }
@@ -1621,6 +1623,16 @@ function renderAnnotations(b) {
 
 
 // ─── Init ───
+
+// Click on document background to deselect annotation
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.ann-mark') && !e.target.closest('#trashBin') && window._selAnn){
+    document.querySelectorAll('.ann-mark').forEach(function(s){s.style.outline='';s.style.zIndex='6';});
+    window._selAnn=null;
+  }
+});
+
+
 function init() {
   loadBooks();
   renderSidebar();
