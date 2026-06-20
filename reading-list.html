@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reading List — 我的书单</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <style>
 :root {
   color-scheme: light;
@@ -212,6 +214,12 @@ body {
 .reading-toolbar .page-nav button:hover { background:var(--border-light); }
 
 .reading-body { flex:1; display:flex; overflow:hidden; position:relative; }
+
+/* ─── PDF.js rendered pages ─── */
+.pdf-page-wrapper { position:relative; margin:12px auto; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:inline-block; }
+.pdf-page-wrapper canvas { display:block; }
+.pdf-loading { text-align:center; padding:40px; color:var(--text-secondary); font-size:14px; }
+
 .doc-viewer {
   flex:1; overflow:auto; position:relative; background:#fafafa;
   border-right:1px solid var(--border-light); padding:0;
@@ -456,7 +464,13 @@ body {
   .modal { width:95vw; padding:20px; }
   .reading-body { flex-direction:column; }
   .notes-panel { width:100% !important; max-height:200px; }
-  .doc-viewer { min-height:300px; }
+  
+/* ─── PDF.js rendered pages ─── */
+.pdf-page-wrapper { position:relative; margin:12px auto; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:inline-block; }
+.pdf-page-wrapper canvas { display:block; }
+.pdf-loading { text-align:center; padding:40px; color:var(--text-secondary); font-size:14px; }
+
+.doc-viewer { min-height:300px; }
 }
 </style>
 </head>
@@ -852,12 +866,7 @@ function openReadingView(bookId) {
       const ab=new ArrayBuffer(byteString.length);
       const ia=new Uint8Array(ab);
       for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-      const blobUrl=URL.createObjectURL(new Blob([ab],{type:'application/pdf'}));
-      const iframe=document.createElement('iframe');
-      iframe.src=blobUrl;
-      iframe.style.cssText='width:100%;height:100%;min-height:600px;border:none;';
-      viewer.insertBefore(iframe, stickyContainer);
-      setTimeout(()=>URL.revokeObjectURL(blobUrl),30000);
+      renderPDF(ab, viewer, stickyContainer, b);
     } else if (file.name.toLowerCase().endsWith('.docx')) {
       renderDocx(file.dataUrl, viewer, stickyContainer);
     }
@@ -901,7 +910,7 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
 }
 
 function isPDFViewDoc(){
-  return !!document.querySelector('#docViewer iframe');
+  return !!document.querySelector('#docViewer .pdf-canvas');
 }
 
 function renderStickyOverlays(b) {
@@ -1150,6 +1159,7 @@ function goToPage() {
 function closeReading() {
   document.getElementById('readingView').classList.remove('active');
   document.getElementById('mainGrid').style.display='flex';
+  _pdfDoc=null; _pdfCurrentPage=1;
   currentBookId=null;
   renderSidebar(); renderBooks();
 }
@@ -1480,7 +1490,7 @@ function getAnnLabel(type){
 }
 
 function renderAnnotations(b) {
-  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer embed') || document.querySelector('#docViewer iframe');
+  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer .pdf-page-wrapper');
   if(!docContent) return;
   docContent.querySelectorAll('.ann-mark').forEach(el=>el.remove());
   const currentPage=parseInt(document.getElementById('pageInput').value)||1;
@@ -1535,6 +1545,114 @@ function renderAnnotations(b) {
 
     docContent.appendChild(el);
   });
+}
+
+
+// ─── PDF.js Renderer ─────────────────────────────────────────
+let _pdfDoc=null, _pdfCurrentPage=1;
+
+async function renderPDF(data, viewer, stickyContainer, book){
+  stickyContainer.style.display='block';
+  const loading=document.createElement('div');
+  loading.className='pdf-loading';
+  loading.textContent='⏳ 正在加载 PDF…';
+  viewer.insertBefore(loading, stickyContainer);
+
+  try{
+    const pdf=await pdfjsLib.getDocument({data}).promise;
+    _pdfDoc=pdf;
+    _pdfCurrentPage=1;
+    // Update total pages
+    if(!book.readingProgress) book.readingProgress={};
+    book.readingProgress.totalPages=pdf.numPages;
+    book.readingProgress.currentPage=1;
+    book.readingProgress.percentage=Math.round(1/pdf.numPages*100);
+    saveBooks();
+    document.getElementById('pageTotal').textContent='/ '+pdf.numPages;
+    document.getElementById('pageInput').value=1;
+    document.getElementById('progressPercent').textContent=Math.round(1/pdf.numPages*100)+'%';
+    loading.remove();
+    await renderPDFPage(1);
+  }catch(e){
+    loading.textContent='❌ PDF 加载失败: '+e.message;
+    console.error('PDF error:',e);
+  }
+}
+
+async function renderPDFPage(pageNum){
+  if(!_pdfDoc) return;
+  _pdfCurrentPage=pageNum;
+  document.getElementById('pageInput').value=pageNum;
+  const total=_pdfDoc.numPages;
+  document.getElementById('pageTotal').textContent='/ '+total;
+  document.getElementById('progressPercent').textContent=Math.round(pageNum/total*100)+'%';
+
+  const viewer=document.getElementById('docViewer');
+  // Remove old page wrapper
+  viewer.querySelectorAll('.pdf-page-wrapper,.pdf-loading').forEach(el=>el.remove());
+
+  const loading=document.createElement('div');
+  loading.className='pdf-loading';
+  loading.textContent='⏳ 渲染第 '+pageNum+' 页…';
+  const stickyContainer=document.getElementById('stickyContainer');
+  viewer.insertBefore(loading, stickyContainer);
+
+  try{
+    const page=await _pdfDoc.getPage(pageNum);
+    const scale=1.2;
+    const viewport=page.getViewport({scale});
+    const canvas=document.createElement('canvas');
+    canvas.className='pdf-canvas';
+    const ctx=canvas.getContext('2d');
+    canvas.width=viewport.width;
+    canvas.height=viewport.height;
+
+    const wrapper=document.createElement('div');
+    wrapper.className='pdf-page-wrapper';
+    wrapper.style.width=viewport.width+'px';
+    wrapper.style.height=viewport.height+'px';
+    wrapper.appendChild(canvas);
+
+    await page.render({canvasContext:ctx, viewport}).promise;
+    loading.remove();
+    viewer.insertBefore(wrapper, stickyContainer);
+
+    // Re-render annotations for this page
+    const b=books.find(bk=>bk.id===currentBookId);
+    if(b) renderAnnotations(b);
+
+    // Save reading progress
+    const bk=books.find(bk=>bk.id===currentBookId);
+    if(bk){
+      if(!bk.readingProgress) bk.readingProgress={};
+      bk.readingProgress.currentPage=pageNum;
+      bk.readingProgress.totalPages=total;
+      bk.readingProgress.percentage=Math.round(pageNum/total*100);
+      saveBooks();
+    }
+  }catch(e){
+    loading.textContent='❌ 渲染失败: '+e.message;
+    console.error('Page render error:',e);
+  }
+}
+
+// Override changePage to use pdf.js
+function changePagePDF(delta){
+  if(!_pdfDoc) return;
+  const newPage=Math.max(1,Math.min(_pdfDoc.numPages,_pdfCurrentPage+delta));
+  renderPDFPage(newPage);
+  // Re-render sticky overlays
+  const b=books.find(bk=>bk.id===currentBookId);
+  if(b){renderStickyOverlays(b);renderNotesList(b);}
+}
+
+function goToPagePDF(){
+  if(!_pdfDoc) return;
+  const p=parseInt(document.getElementById('pageInput').value)||1;
+  const newPage=Math.max(1,Math.min(_pdfDoc.numPages,p));
+  renderPDFPage(newPage);
+  const b=books.find(bk=>bk.id===currentBookId);
+  if(b){renderStickyOverlays(b);renderNotesList(b);}
 }
 
 // ─── Init ───
