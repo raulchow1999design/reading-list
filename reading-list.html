@@ -314,8 +314,11 @@ body {
 
 /* ─── Annotation Toolbar ─── */
 .annotation-toolbar {
-  position:sticky; top:10px; float:right; display:flex; flex-direction:column; gap:5px;
-  z-index:8; opacity:0.5; transition:opacity 0.2s; margin-right:8px;
+  position:sticky; top:10px; float:right; display:flex; gap:5px;
+  z-index:8; opacity:0.5; transition:opacity 0.2s; margin-right:4px;
+  background:rgba(255,255,255,0.7); border-radius:20px; padding:6px 4px;
+  backdrop-filter:blur(4px);
+  flex-wrap:wrap; max-width:200px; justify-content:center;
 }
 .annotation-toolbar:hover { opacity:1; }
 .ann-btn {
