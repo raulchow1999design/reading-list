@@ -347,27 +347,21 @@ body {
 
 
 .trash-bin {
-  position:fixed; bottom:24px; right:24px; width:52px; height:52px;
-  border-radius:50%; background:#ff3b30; color:#fff; display:flex;
-  align-items:center; justify-content:center; font-size:24px;
-  box-shadow:0 4px 16px rgba(255,59,48,0.35); z-index:50;
-  opacity:0.45; transition:all 0.2s; cursor:pointer;
-  -webkit-user-select:none; user-select:none;
+  position:sticky; top:10px; float:left; width:36px; height:36px;
+  border-radius:50%; background:rgba(255,255,255,0.85); color:#ff3b30;
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.1); z-index:50;
+  opacity:0.5; transition:all 0.2s; cursor:pointer; margin:8px;
+  -webkit-user-select:none; user-select:none; backdrop-filter:blur(4px);
 }
-.trash-bin:hover { opacity:0.85; transform:scale(1.1); }
-.trash-bin.active { opacity:1; transform:scale(1.3); box-shadow:0 6px 24px rgba(255,59,48,0.6); }
+.trash-bin:hover { opacity:1; transform:scale(1.15); }
+.trash-bin.active { opacity:1; transform:scale(1.3); box-shadow:0 4px 12px rgba(255,59,48,0.4); background:#ff3b30; color:#fff; }
 .trash-bin .trash-tip {
   position:absolute; bottom:60px; right:0; font-size:11px; color:var(--text-secondary);
   white-space:nowrap; background:var(--card-bg); padding:4px 10px; border-radius:8px;
   box-shadow:0 2px 8px rgba(0,0,0,0.1); opacity:0; transition:opacity 0.2s; pointer-events:none;
 }
 .trash-bin.active .trash-tip { opacity:1; }
-.trash-bin .trash-count {
-  position:absolute; top:-4px; right:-4px; width:18px; height:18px;
-  background:#fff; color:#ff3b30; border-radius:50%; font-size:10px;
-  font-weight:700; display:flex; align-items:center; justify-content:center;
-  border:1px solid #ff3b30;
-}
 
 /* ─── Modal ─── */
 .overlay {
@@ -567,7 +561,7 @@ body {
     </div>
   </div>
 </div>
-<div class="trash-bin" id="trashBin" onclick="clickTrashDelete()"><span style="font-size:11px;position:absolute;bottom:-18px;right:0;color:var(--text-tertiary);white-space:nowrap;">拖这里/点击删</span>🗑</div>
+<div class="trash-bin" id="trashBin" onclick="clickTrashDelete()" title="拖拽标注到这里或点击删除">🗑</div>
 
 <!-- ─── Add/Edit Modal ─── -->
 <div class="overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
