@@ -533,7 +533,6 @@ body {
     <div class="notes-panel" id="notesPanel">
       <div class="notes-panel-header">
         <h4>📝 便签笔记</h4>
-        <span id="stickyPageLabel" style="font-size:11px;color:var(--text-tertiary);margin-left:auto;margin-right:8px;"></span>
         <button onclick="addNoteFromPanel()" title="新建便签">＋</button>
         <button onclick="toggleNotesPanel()" title="折叠">◀</button>
       </div>
@@ -862,24 +861,17 @@ function openReadingView(bookId) {
       iframe.src=blobUrl;
       iframe.style.cssText='width:100%;height:100%;min-height:600px;border:none;';
       viewer.insertBefore(iframe, stickyContainer);
-      stickyContainer.style.display='block';
       setTimeout(()=>URL.revokeObjectURL(blobUrl),30000);
     } else if (file.name.toLowerCase().endsWith('.docx')) {
-      stickyContainer.style.display='none';
       renderDocx(file.dataUrl, viewer, stickyContainer);
     }
   } else {
     noDoc.style.display='flex';
-    stickyContainer.style.display='block';
   }
 
   renderStickyOverlays(b);
   renderNotesList(b);
   renderAnnotations(b);
-  // For PDF, auto-expand notes panel
-  if(!!document.querySelector('#docViewer iframe')){
-    document.getElementById('notesPanel').classList.remove('collapsed');
-  }
 }
 
 function updateProgressDisplay(b) {
@@ -913,71 +905,15 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
 }
 
 function renderStickyOverlays(b) {
-  document.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
+  const container=document.getElementById('stickyContainer');
+  // Remove existing overlays (keep the note container clean)
+  container.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
 
-  const currentPage=parseInt(document.getElementById('pageInput').value)||1;
-  const isPDF=!!document.querySelector('#docViewer iframe');
-  const docContent=document.querySelector('.doc-loaded');
-
-  let container;
-  if(isPDF){
-    // PDF: just clear the container, notes shown in side panel
-    container=document.getElementById('stickyContainer');
-    container.style.cssText='display:none;';
-  } else if(docContent){
-    container=docContent;
-  } else {
-    container=document.getElementById('stickyContainer');
-  }
-
-  const allNotes=(b.stickyNotes||[]);
-  const pageNotes=isPDF ? allNotes.filter(n=>n.pageNumber===currentPage) : allNotes;
-
-  // Update page label
-  const pageLabel=document.getElementById('stickyPageLabel');
-  if(pageLabel){
-    pageLabel.textContent=pageNotes.length?`第 ${currentPage} 页 · ${pageNotes.length} 张便签`:`第 ${currentPage} 页`;
-  }
-
-  // For PDF: render notes as a flat list inside stickyContainer below the PDF
-  if(isPDF){
-    const pdfContainer=document.getElementById('stickyContainer');
-    pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:8px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:40px;align-items:flex-start;';
-    pdfContainer.innerHTML='';
-    if(!pageNotes.length){
-      pdfContainer.innerHTML='<span style="font-size:12px;color:var(--text-tertiary);padding:8px;">此页暂无便签</span>';
-    }
-    pageNotes.forEach(note=>{
-      const el=document.createElement('div');
-      el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
-      el.style.cssText='position:relative;display:inline-flex;flex-direction:column;margin:4px;min-width:140px;';
-      el.setAttribute('data-note-id',note.id);
-      el.innerHTML=`
-        <div class="sticky-page-tag" style="font-size:10px;">p.${note.pageNumber||1}</div>
-        <div class="sticky-text">${(note.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
-        <div class="sticky-actions" style="margin-top:4px;">
-          <button onclick="toggleStickyTransparent('${note.id}')">${note.isTransparent?'👁':'👻'}</button>
-          <button onclick="editStickyNote('${note.id}')">✎</button>
-          <button onclick="deleteStickyNote('${note.id}')">🗑</button>
-        </div>`;
-      pdfContainer.appendChild(el);
-    });
-    return;
-  }
-
-  // For DOCX: render overlays on document
-  if(!container) return;
-  allNotes.forEach(note=>{
+  (b.stickyNotes||[]).forEach(note=>{
     const el=document.createElement('div');
     el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
-    // For PDF, use inline-block layout; for docx, use absolute
-    if(isPDF){
-      el.style.cssText='position:relative;display:inline-block;margin:4px;';
-      el.style.left=''; el.style.top='';
-    } else {
-      el.style.left=(note.position?.x||10)+'px';
-      el.style.top=(note.position?.y||10)+'px';
-    }
+    el.style.left=(note.position?.x||10)+'px';
+    el.style.top=(note.position?.y||10)+'px';
     el.setAttribute('data-note-id',note.id);
     el.innerHTML=`
       <div class="sticky-page-tag">p.${note.pageNumber||1}</div>
@@ -988,30 +924,8 @@ function renderStickyOverlays(b) {
         <button onclick="deleteStickyNote('${note.id}')" title="删除">🗑</button>
       </div>`;
 
-    // Drag support (only for docx)
-    if(!isPDF){
-      let dragging=false, startX, startY, origLeft, origTop;
-      el.addEventListener('mousedown',function(e){
-        if (e.target.tagName==='BUTTON') return;
-        dragging=true; startX=e.clientX; startY=e.clientY;
-        origLeft=parseInt(el.style.left)||0; origTop=parseInt(el.style.top)||0;
-        el.style.zIndex=20;
-        e.preventDefault();
-      });
-      document.addEventListener('mousemove',function(e){
-        if(!dragging)return;
-        el.style.left=(origLeft+e.clientX-startX)+'px';
-        el.style.top=(origTop+e.clientY-startY)+'px';
-      });
-      document.addEventListener('mouseup',function(){
-        if(dragging){
-          dragging=false; el.style.zIndex=10;
-          const bk=books.find(bk=>bk.id===currentBookId);
-          if(bk){const n=bk.stickyNotes.find(nn=>nn.id===note.id);if(n){n.position={x:parseInt(el.style.left),y:parseInt(el.style.top)};saveBooks();}}
-        }
-      });
-    }
-
+    // Drag support
+    let dragging=false, startX, startY, origLeft, origTop;
     // Click on transparent note -> highlight in side panel
     el.addEventListener('click',function(e){
       if(e.target.tagName==='BUTTON') return;
@@ -1025,6 +939,27 @@ function renderStickyOverlays(b) {
           target.style.boxShadow='0 0 0 3px var(--accent)';
           setTimeout(()=>{target.style.boxShadow='';},2500);
         }
+      }
+    });
+    // Add data attribute to list items for linking
+    el.addEventListener('mousedown',function(e){
+      if (e.target.tagName==='BUTTON') return;
+      dragging=true; startX=e.clientX; startY=e.clientY;
+      origLeft=parseInt(el.style.left)||0; origTop=parseInt(el.style.top)||0;
+      el.style.zIndex=20;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove',function(e){
+      if(!dragging)return;
+      el.style.left=(origLeft+e.clientX-startX)+'px';
+      el.style.top=(origTop+e.clientY-startY)+'px';
+    });
+    document.addEventListener('mouseup',function(){
+      if(dragging){
+        dragging=false; el.style.zIndex=10;
+        // Save position
+        const b=books.find(bk=>bk.id===currentBookId);
+        if(b){const n=b.stickyNotes.find(nn=>nn.id===note.id);if(n){n.position={x:parseInt(el.style.left),y:parseInt(el.style.top)};saveBooks();}}
       }
     });
 
@@ -1137,7 +1072,6 @@ function changePage(delta) {
   saveBooks();
   updateProgressDisplay(b);
   renderAnnotations(b);
-  renderStickyOverlays(b);
 }
 
 function goToPage() {
@@ -1149,8 +1083,6 @@ function goToPage() {
   if(b.readingProgress.totalPages>0) b.readingProgress.percentage=Math.round(b.readingProgress.currentPage/b.readingProgress.totalPages*100);
   saveBooks();
   updateProgressDisplay(b);
-  renderAnnotations(b);
-  renderStickyOverlays(b);
 }
 
 function closeReading() {
