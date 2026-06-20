@@ -1622,7 +1622,7 @@ async function renderPDF(data, viewer, stickyContainer, book){
   }
 }
 
-async function renderPDFPage(pageNum){
+async async function renderPDFPage(pageNum){
   if(!_pdfDoc) return;
   _pdfCurrentPage=pageNum;
   document.getElementById('pageInput').value=pageNum;
