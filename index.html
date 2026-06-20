@@ -337,15 +337,9 @@ body {
   pointer-events:auto; transition:opacity 0.15s;
 }
 .ann-mark:hover { z-index:9; }
-.ann-mark svg { display:block; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12)); pointer-events:none; }
-.ann-mark .ann-delete {
-  position:absolute; top:-8px; right:-8px; width:20px; height:20px;
-  background:#ff3b30; color:#fff; border-radius:50%; border:none;
-  font-size:12px; cursor:pointer; display:none; align-items:center;
-  justify-content:center; line-height:1; box-shadow:0 1px 4px rgba(0,0,0,0.2);
-}
-.ann-mark:hover .ann-delete { display:flex; }
-.ann-mark .ann-delete:hover { background:#d02b25; }
+.ann-mark.selected { outline:3px dashed var(--accent); outline-offset:4px; z-index:12 !important; }
+.ann-mark svg { pointer-events:none; }
+.ann-mark svg { display:block; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12)); pointer-events:none; }
 
 /* ─── Modal ─── */
 .overlay {
@@ -1535,18 +1529,7 @@ function renderAnnotations(b) {
     el.setAttribute('data-ann-id',ann.id);
 
     // Delete button
-    const delBtn=document.createElement('button');
-    delBtn.className='ann-delete';
-    delBtn.textContent='×';
-    delBtn.onclick=function(e){
-      e.stopPropagation();
-      e.preventDefault();
-      b.annotations=b.annotations.filter(a=>a.id!==ann.id);
-      saveBooks();
-      renderAnnotations(b);
-    };
-    delBtn.style.cssText='position:absolute;top:-8px;right:-8px;width:20px;height:20px;background:#ff3b30;color:#fff;border-radius:50%;border:none;font-size:12px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,0.2);z-index:10;';
-    el.appendChild(delBtn);
+    
 
     if(ann.type==='scribble'){
       // Hand-drawn style red circle (irregular path)
@@ -1564,7 +1547,6 @@ function renderAnnotations(b) {
     // Drag support
     let dragging=false, sx,sy, ox,oy;
     el.addEventListener('mousedown',function(e){
-      if(e.target===delBtn) return;
       dragging=true; sx=e.clientX; sy=e.clientY;
       ox=parseInt(el.style.left)||0; oy=parseInt(el.style.top)||0;
       e.preventDefault();
@@ -1581,6 +1563,35 @@ function renderAnnotations(b) {
     docContent.appendChild(el);
   });
 }
+
+
+// ─── Keyboard: Delete selected annotation ────────────────────
+document.addEventListener('keydown',function(e){
+  if((e.key==='Delete'||e.key==='Backspace')&&window._selAnn){
+    var b=books.find(function(bk){return bk.id===window._selAnn.bookId;});
+    if(b){
+      b.annotations=(b.annotations||[]).filter(function(a){return a.id!==window._selAnn.annId;});
+      saveBooks();
+      window._selAnn=null;
+      renderAnnotations(b);
+      toast('标注已删除');
+    }
+    e.preventDefault();
+  }
+  // Deselect on Escape
+  if(e.key==='Escape'&&window._selAnn){
+    document.querySelectorAll('.ann-mark.selected').forEach(function(s){s.classList.remove('selected');});
+    window._selAnn=null;
+  }
+});
+
+// Click on document background to deselect
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.ann-mark')&&window._selAnn){
+    document.querySelectorAll('.ann-mark.selected').forEach(function(s){s.classList.remove('selected');});
+    window._selAnn=null;
+  }
+});
 
 // ─── Init ───
 function init() {
