@@ -1586,23 +1586,29 @@ function renderAnnotations(b) {
     }
 
     // Drag support
-    let dragging=false, sx,sy, ox,oy;
-    el.addEventListener('click',function(e){
-      // Select on click (not drag)
-      selectAnnotation(currentBookId, ann.id, el);
-    });
+    let dragging=false, sx,sy, ox,oy, hasMoved;
     el.addEventListener('mousedown',function(e){
+      hasMoved=false;
       dragging=true; sx=e.clientX; sy=e.clientY;
       ox=parseInt(el.style.left)||0; oy=parseInt(el.style.top)||0;
       e.preventDefault();
     });
     document.addEventListener('mousemove',function(e){
       if(!dragging) return;
+      if(Math.abs(e.clientX-sx)>2||Math.abs(e.clientY-sy)>2) hasMoved=true;
       el.style.left=(ox+e.clientX-sx)+'px';
       el.style.top=(oy+e.clientY-sy)+'px';
     });
     document.addEventListener('mouseup',function(){
-      if(dragging){ dragging=false; ann.x=parseInt(el.style.left); ann.y=parseInt(el.style.top); saveBooks(); }
+      if(dragging){
+        dragging=false;
+        if(!hasMoved){
+          // Click (not drag) — select annotation
+          selectAnnotation(currentBookId, ann.id, el);
+        } else {
+          ann.x=parseInt(el.style.left); ann.y=parseInt(el.style.top); saveBooks();
+        }
+      }
     });
 
     docContent.appendChild(el);
