@@ -314,18 +314,20 @@ body {
 
 /* ─── Annotation Toolbar ─── */
 .annotation-toolbar {
-  position:fixed; top:60px; right:20px; display:flex; gap:5px;
-  z-index:50; opacity:0.45; transition:opacity 0.2s;
-  width:fit-content;
+  position:sticky; top:10px; display:flex; gap:5px;
+  z-index:8; opacity:0.45; transition:opacity 0.2s;
+  width:fit-content; margin-left:auto; margin-right:4px;
   background:rgba(255,255,255,0.75); border-radius:20px; padding:6px 5px;
   backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-  flex-wrap:wrap; justify-content:center;
+  flex-wrap:wrap; justify-content:center; float:right;
   box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid rgba(0,0,0,0.04);
 }
 .annotation-toolbar:hover { opacity:1; }
 
+/* Keep toolbar inside doc-viewer, not overlapping notes panel */
+.doc-viewer { position:relative; }
+
 /* Hide toolbar when reading view is not active */
-.reading-view:not(.active) .annotation-toolbar { display:none !important; }
 
 .ann-btn {
   width:34px; height:34px; border-radius:50%; border:1px solid var(--border);
