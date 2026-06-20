@@ -1516,8 +1516,15 @@ function showImprovementTip() {
 }
 
 // ─── Trash: click to delete selected annotation ─────────────
+function selectAnnotation(bookId, annId, el){
+  document.querySelectorAll('.ann-mark').forEach(function(s){s.style.outline='';s.style.zIndex='6';});
+  el.style.outline='3px dashed var(--accent)';
+  el.style.zIndex='12';
+  window._selAnn={bookId:bookId, annId:annId};
+}
+
 function clickTrashDelete(){
-  if(!window._selAnn) return;
+  if(!window._selAnn){ toast('请先点击一个标注选中它'); return; }
   var b=books.find(function(bk){return bk.id===window._selAnn.bookId;});
   if(b){
     b.annotations=(b.annotations||[]).filter(function(a){return a.id!==window._selAnn.annId;});
@@ -1580,6 +1587,10 @@ function renderAnnotations(b) {
 
     // Drag support
     let dragging=false, sx,sy, ox,oy;
+    el.addEventListener('click',function(e){
+      // Select on click (not drag)
+      selectAnnotation(currentBookId, ann.id, el);
+    });
     el.addEventListener('mousedown',function(e){
       dragging=true; sx=e.clientX; sy=e.clientY;
       ox=parseInt(el.style.left)||0; oy=parseInt(el.style.top)||0;
