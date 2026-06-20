@@ -219,7 +219,7 @@ body {
 .doc-viewer iframe, .doc-viewer embed {
   width:100%; height:100%; border:none; min-height:600px;
 }
-.doc-loaded { position:relative;
+.doc-loaded {
   padding:40px 48px; max-width:800px; margin:0 auto;
   font-size:15px; line-height:1.8; color:#333; position:relative;
 }
@@ -271,12 +271,6 @@ body {
   border-radius:3px; color:var(--text-tertiary);
 }
 .note-item-actions button:hover { background:rgba(0,0,0,0.08); color:var(--text); }
-
-.note-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:4px; }
-.note-tag { font-size:10px; background:rgba(0,0,0,0.08); color:var(--text-secondary); padding:1px 6px; border-radius:8px; cursor:pointer; }
-.note-tag:hover { background:rgba(0,0,0,0.14); }
-.note-tag.active { background:var(--accent); color:#fff; }
-
 
 /* Sticky note overlay on document */
 .sticky-overlay {
@@ -483,13 +477,6 @@ body {
   </div>
   <div class="reading-body">
     <div class="doc-viewer" id="docViewer">
-        <div class="annotation-toolbar" id="annotationToolbar">
-          <button class="btn-check" onclick="addAnnotation('check')" title="✓ 打钩">✓</button>
-          <button class="btn-cross" onclick="addAnnotation('cross')" title="✗ 打叉">✗</button>
-          <button class="btn-circle" onclick="addAnnotation('circle')" title="○ 圆圈">○</button>
-          <button class="btn-exclaim" onclick="addAnnotation('exclaim')" title="! 感叹号">!</button>
-          <button class="btn-highlight" onclick="startHighlight()" title="🖊 荧光笔">🖊</button>
-        </div>
         
       <div class="no-doc" id="noDocMsg">
         <span style="font-size:48px;">📖</span>
@@ -693,53 +680,33 @@ function setFilter(filter, category) {
   renderSidebar(); renderBooks();
 }
 
-
-function filterByNoteTag(tag) {
-  noteSearchQuery='';
-  const input=document.getElementById('noteSearchInput');
-  if(input) input.value='tag:'+tag;
-  searchNotesByTag(tag);
-}
-
-function searchNotesByTag(tag) {
-  const container=document.getElementById('noteSearchResults');
-  if(!container) return;
-  const results=[];
-  books.forEach(b=>{
-    (b.stickyNotes||[]).forEach(n=>{
-      if((n.tags||[]).includes(tag)){
-        results.push({book:b, note:n});
-      }
-    });
-  });
-  if(!results.length){
-    container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🏷️ 没有标签为「'+tag+'」的便签</div>';
-    return;
-  }
-  results.sort((a,b)=>new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0));
-  container.innerHTML='<div style="padding:4px 20px 8px;font-size:11px;color:var(--text-secondary);">🏷️ 标签: <strong>'+tag+'</strong> ('+results.length+'条)</div>'+results.map(r=>`
-    <div class="note-search-result" onclick="openReadingView('${r.book.id}')">
-      <div class="ns-book">📖 ${r.book.title||'未命名'}</div>
-      <div class="ns-text">${(r.note.text||'').slice(0,80)}${(r.note.text||'').length>80?'…':''}</div>
-      <div class="ns-date">${r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):''} · 第${r.note.pageNumber||1}页</div>
-    </div>
-  `).join('');
-}
-
-// Also support "tag:xxx" in the search box
 function searchNotes() {
   const q=(document.getElementById('noteSearchInput')?.value||'').toLowerCase().trim();
   noteSearchQuery=q;
   const container=document.getElementById('noteSearchResults');
-  if(!q){ container.innerHTML='<div class="note-search-hint" style="padding:6px 0;font-size:11px;color:var(--text-tertiary);text-align:center;">'+(books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)===0?'还没有便签笔记':'输入关键词搜索所有书籍中的便签')+'</div>';return;}
-  if(q.startsWith('tag:')){ searchNotesByTag(q.slice(4)); return; }
+  if (!q) {
+    container.innerHTML='<div class="note-search-hint" style="padding:6px 0;font-size:11px;color:var(--text-tertiary);text-align:center;">'+(books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)===0?'还没有便签笔记':'输入关键词搜索所有书籍中的便签')+'</div>';
+    return;
+  }
+
   const results=[];
-  books.forEach(b=>{(b.stickyNotes||[]).forEach(n=>{if((n.text||'').toLowerCase().includes(q)||(n.tags||[]).some(t=>t.toLowerCase().includes(q))){results.push({book:b,note:n});}});});
-  if(!results.length){container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🔍 未找到匹配的便签<br><small style="color:var(--text-tertiary);">共搜索了 '+books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)+' 条便签</small></div>';return;}
+  books.forEach(b=>{
+    (b.stickyNotes||[]).forEach(n=>{
+      if ((n.text||'').toLowerCase().includes(q)) {
+        results.push({book:b, note:n});
+      }
+    });
+  });
+
+  if (!results.length) {
+    container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🔍 未找到匹配的便签<br><small style="color:var(--text-tertiary);">共搜索了 '+books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)+' 条便签</small></div>';
+    return;
+  }
+
   results.sort((a,b)=>new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0));
   container.innerHTML=results.map(r=>`
     <div class="note-search-result" onclick="openReadingView('${r.book.id}')">
-      <div class="ns-book">📖 ${r.book.title||'未命名'} ${(r.note.tags||[]).length?' · '+r.note.tags.map(t=>'#'+t).join(' '):''}</div>
+      <div class="ns-book">📖 ${r.book.title||'未命名'}</div>
       <div class="ns-text">${(r.note.text||'').slice(0,80)}${(r.note.text||'').length>80?'…':''}</div>
       <div class="ns-date">${r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):''} · 第${r.note.pageNumber||1}页</div>
     </div>
@@ -858,7 +825,6 @@ function openReadingView(bookId) {
 
   renderStickyOverlays(b);
   renderNotesList(b);
-  renderAnnotations(b);
 }
 
 function updateProgressDisplay(b) {
@@ -892,12 +858,9 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
 }
 
 function renderStickyOverlays(b) {
-  // Find the document content container (doc-loaded or embed/iframe)
-  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer embed') || document.querySelector('#docViewer iframe');
-  // Remove overlays from the whole viewer
-  document.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
-  const container=docContent || document.getElementById('stickyContainer');
-  if (!container) return;
+  const container=document.getElementById('stickyContainer');
+  // Remove existing overlays (keep the note container clean)
+  container.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
 
   (b.stickyNotes||[]).forEach(note=>{
     const el=document.createElement('div');
@@ -967,7 +930,6 @@ function renderNotesList(b) {
   list.innerHTML=notes.map(n=>`
     <div class="sticky-note-item note-color-${n.color||'yellow'}" data-note-id="${n.id}" onclick="focusStickyNote('${n.id}')">
       <div>${(n.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
-      ${(n.tags||[]).length?`<div class="note-tags">${n.tags.map(t=>\`<span class="note-tag" onclick="event.stopPropagation();filterByNoteTag('\${t}')">\${t}</span>\`).join('')}</div>`:''}
       <div class="note-item-meta">
         <span class="note-item-page">第${n.pageNumber||1}页 · ${n.createdAt?new Date(n.createdAt).toLocaleDateString('zh-CN'):''}</span>
         <div class="note-item-actions">
@@ -1006,35 +968,10 @@ function openNoteEditor(noteId) {
   const note=b.stickyNotes.find(n=>n.id===noteId);
   if(!note) return;
 
-  if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
-  const overlay=document.createElement('div');
-  overlay.className='overlay';
-  overlay.style.cssText='z-index:150;';
-  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
-  const tags=(note.tags||[]).join(', ');
-  overlay.innerHTML=`<div class="modal" style="width:440px;gap:14px;">
-    <h3>📝 编辑便签</h3>
-    <div class="form-group"><label>便签内容</label><textarea id="noteEditText" style="min-height:100px;">${(note.text||'').replace(/</g,'&lt;')}</textarea></div>
-    <div class="form-group"><label>标签（用逗号分隔，如：重要,好句,思考）</label><input type="text" id="noteEditTags" value="${tags.replace(/"/g,'&quot;')}" placeholder="重要, 好句, 思考"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="this.closest('.overlay').remove()">取消</button>
-      <button class="btn-save" onclick="saveNoteEdit('${noteId}')">保存</button>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
-  window._noteEditorOverlay=overlay;
-}
-
-function saveNoteEdit(noteId){
-  const b=books.find(bk=>bk.id===currentBookId);
-  if(!b) return;
-  const note=b.stickyNotes.find(n=>n.id===noteId);
-  if(!note) return;
-  note.text=document.getElementById('noteEditText')?.value||'';
-  const tagStr=document.getElementById('noteEditTags')?.value||'';
-  note.tags=tagStr.split(',').map(t=>t.trim()).filter(Boolean);
+  const text=prompt('输入便签内容：',note.text||'');
+  if(text===null) return;
+  note.text=text;
   saveBooks();
-  if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
   refreshReadingView();
 }
 function editStickyNote(noteId) { openNoteEditor(noteId); }
@@ -1087,7 +1024,6 @@ function changePage(delta) {
   if(b.readingProgress.totalPages>0) b.readingProgress.percentage=Math.round(b.readingProgress.currentPage/b.readingProgress.totalPages*100);
   saveBooks();
   updateProgressDisplay(b);
-  renderAnnotations(b);
 }
 
 function goToPage() {
@@ -1406,133 +1342,6 @@ function showImprovementTip() {
   text.textContent=tip;
   banner.style.display='flex';
   setTimeout(()=>banner.style.display='none',8000);
-}
-
-
-
-// ─── Annotations ─────────────────────────────────────────────
-function addAnnotation(type) {
-  const b=books.find(bk=>bk.id===currentBookId);
-  if(!b) return;
-  if(!b.annotations) b.annotations=[];
-  const ann={
-    id:uid(), type:type,
-    x:30+Math.random()*300, y:40+Math.random()*400,
-    size:type==='highlight'?140:(type==='exclaim'?42:44),
-    pageNumber:parseInt(document.getElementById('pageInput').value)||1
-  };
-  b.annotations.push(ann);
-  saveBooks();
-  renderAnnotations(b);
-}
-
-function renderAnnotations(b) {
-  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer embed') || document.querySelector('#docViewer iframe');
-  if(!docContent) return;
-  // Remove existing annotation marks
-  docContent.querySelectorAll('.annotation-mark,.highlight-mark').forEach(el=>el.remove());
-  const currentPage=parseInt(document.getElementById('pageInput').value)||1;
-
-  (b.annotations||[]).filter(a=>a.pageNumber===currentPage).forEach(ann=>{
-    if(ann.type==='highlight'){
-      const el=document.createElement('div');
-      el.className='highlight-mark';
-      el.style.cssText=`left:${ann.x}px;top:${ann.y}px;width:${ann.size}px;height:${ann.size/6||16}px;background:rgba(255,230,128,0.4);`;
-      el.setAttribute('data-ann-id',ann.id);
-      docContent.appendChild(el);
-      return;
-    }
-
-    const el=document.createElement('div');
-    el.className='annotation-mark';
-    el.style.cssText=`left:${ann.x}px;top:${ann.y}px;width:${ann.size}px;height:${ann.size}px;`;
-    el.setAttribute('data-ann-id',ann.id);
-
-    const svgs={
-      check: `<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="21" fill="none" stroke="#34c759" stroke-width="2.5" opacity="0.5"/><polyline points="13,24 20,32 36,16" fill="none" stroke="#34c759" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-      cross: `<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="21" fill="none" stroke="#ff3b30" stroke-width="2.5" opacity="0.5"/><line x1="14" y1="14" x2="34" y2="34" stroke="#ff3b30" stroke-width="3" stroke-linecap="round"/><line x1="34" y1="14" x2="14" y2="34" stroke="#ff3b30" stroke-width="3" stroke-linecap="round"/></svg>`,
-      circle: `<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="18" fill="none" stroke="#0071e3" stroke-width="2.8" opacity="0.6"/></svg>`,
-      exclaim: `<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="21" fill="none" stroke="#f5a623" stroke-width="2.5" opacity="0.5"/><text x="24" y="30" text-anchor="middle" font-size="26" font-weight="900" fill="#f5a623" opacity="0.7">!</text></svg>`
-    };
-    el.innerHTML=(svgs[ann.type]||'');
-
-    // Resize handle
-    const resize=document.createElement('div');
-    resize.className='mark-resize';
-    el.appendChild(resize);
-
-    // Drag
-    let dragging=false, sx,sy, ox,oy;
-    el.addEventListener('mousedown',function(e){
-      if(e.target===resize) return;
-      dragging=true; sx=e.clientX; sy=e.clientY;
-      ox=parseInt(el.style.left)||0; oy=parseInt(el.style.top)||0;
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove',function(e){
-      if(!dragging) return;
-      el.style.left=(ox+e.clientX-sx)+'px';
-      el.style.top=(oy+e.clientY-sy)+'px';
-    });
-    document.addEventListener('mouseup',function(){
-      if(dragging){ dragging=false; ann.x=parseInt(el.style.left); ann.y=parseInt(el.style.top); saveBooks(); }
-    });
-
-    // Resize
-    resize.addEventListener('mousedown',function(e){
-      e.stopPropagation();
-      let rs=e.clientY; let os=ann.size;
-      function onMove(ev){ const ns=Math.max(18,Math.min(180,os+(ev.clientY-rs))); ann.size=ns; el.style.width=ns+'px'; el.style.height=ns+'px'; el.querySelector('svg')?.setAttribute('width',ns); el.querySelector('svg')?.setAttribute('height',ns); }
-      function onUp(){ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); saveBooks(); }
-      document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
-    });
-
-    // Delete on double-click
-    el.addEventListener('dblclick',function(){
-      if(!confirm('删除这个标注？')) return;
-      b.annotations=b.annotations.filter(a=>a.id!==ann.id);
-      saveBooks();
-      renderAnnotations(b);
-    });
-
-    docContent.appendChild(el);
-  });
-}
-
-function startHighlight() {
-  const b=books.find(bk=>bk.id===currentBookId);
-  if(!b) return;
-  toast('🖊 请在文档上拖拽来画荧光标记');
-  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer');
-  if(!docContent) return;
-
-  let startX, startY;
-  const onDown=function(e){
-    const rect=docContent.getBoundingClientRect();
-    startX=e.clientX-rect.left+docContent.scrollLeft;
-    startY=e.clientY-rect.top+docContent.scrollTop;
-    docContent.style.cursor='crosshair';
-    const onUp=function(ev){
-      docContent.style.cursor='';
-      docContent.removeEventListener('mouseup',onUp);
-      const rect2=docContent.getBoundingClientRect();
-      const endX=ev.clientX-rect2.left+docContent.scrollLeft;
-      const endY=ev.clientY-rect2.top+docContent.scrollTop;
-      const w=Math.abs(endX-startX);
-      const h=Math.abs(endY-startY);
-      if(w<10&&h<10){ toast('拖拽区域太小，请重试'); return; }
-      if(!b.annotations) b.annotations=[];
-      b.annotations.push({
-        id:uid(), type:'highlight',
-        x:Math.min(startX,endX), y:Math.min(startY,endY),
-        size:Math.max(w,60), pageNumber:parseInt(document.getElementById('pageInput').value)||1
-      });
-      saveBooks();
-      renderAnnotations(b);
-    };
-    docContent.addEventListener('mouseup',onUp);
-  };
-  docContent.addEventListener('mousedown',onDown,{once:true});
 }
 
 
