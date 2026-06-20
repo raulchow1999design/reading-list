@@ -839,10 +839,10 @@ function openReadingView(bookId) {
   const noDoc=document.getElementById('noDocMsg');
   const pullBtn=document.getElementById('pullNoteBtn');
 
-  viewer.innerHTML='';
-  viewer.appendChild(noDoc);
-  viewer.appendChild(stickyContainer);
-  viewer.appendChild(pullBtn);
+  viewer.querySelectorAll('.ann-mark,.sticky-overlay,.doc-loaded,embed,iframe').forEach(el=>el.remove());
+  if(!viewer.contains(noDoc)) viewer.appendChild(noDoc);
+  if(!viewer.contains(stickyContainer)) viewer.appendChild(stickyContainer);
+  if(!viewer.contains(pullBtn)) viewer.appendChild(pullBtn);
 
   if ((b.localFiles||[]).length>0) {
     const file=b.localFiles[0];
