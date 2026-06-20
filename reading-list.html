@@ -314,8 +314,8 @@ body {
 
 /* ─── Annotation Toolbar ─── */
 .annotation-toolbar {
-  position:absolute; right:10px; top:10px; display:flex; flex-direction:column; gap:5px;
-  z-index:8; opacity:0.5; transition:opacity 0.2s;
+  position:sticky; top:10px; float:right; display:flex; flex-direction:column; gap:5px;
+  z-index:8; opacity:0.5; transition:opacity 0.2s; margin-right:8px;
 }
 .annotation-toolbar:hover { opacity:1; }
 .ann-btn {
@@ -333,13 +333,23 @@ body {
 
 /* ─── Annotation Marks on Document ─── */
 .ann-mark {
-  position:absolute; cursor:move; z-index:6; user-select:none;
+  position:absolute; cursor:grab; z-index:6; user-select:none;
   pointer-events:auto; transition:opacity 0.15s;
 }
+.ann-mark:active { cursor:grabbing; }
 .ann-mark:hover { z-index:9; }
-.ann-mark.selected { outline:3px dashed var(--accent); outline-offset:4px; z-index:12 !important; }
-.ann-mark svg { pointer-events:none; }
-.ann-mark svg { display:block; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12)); pointer-events:none; }
+.ann-mark.dragging-over-trash { opacity:0.3; outline:3px dashed #ff3b30; outline-offset:4px; }
+.ann-mark svg { display:block; pointer-events:none; filter:drop-shadow(0 1px 3px rgba(0,0,0,0.12)); }
+
+
+.trash-bin {
+  position:fixed; bottom:24px; right:24px; width:52px; height:52px;
+  border-radius:50%; background:#ff3b30; color:#fff; display:flex;
+  align-items:center; justify-content:center; font-size:24px;
+  box-shadow:0 4px 16px rgba(255,59,48,0.35); z-index:50;
+  opacity:0.6; transition:all 0.2s; cursor:default;
+}
+.trash-bin.active { opacity:1; transform:scale(1.3); box-shadow:0 6px 24px rgba(255,59,48,0.5); }
 
 /* ─── Modal ─── */
 .overlay {
@@ -539,6 +549,7 @@ body {
     </div>
   </div>
 </div>
+<div class="trash-bin" id="trashBin" title="把贴纸拖到这里删除">🗑</div>
 
 <!-- ─── Add/Edit Modal ─── -->
 <div class="overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
@@ -1565,33 +1576,7 @@ function renderAnnotations(b) {
 }
 
 
-// ─── Keyboard: Delete selected annotation ────────────────────
-document.addEventListener('keydown',function(e){
-  if((e.key==='Delete'||e.key==='Backspace')&&window._selAnn){
-    var b=books.find(function(bk){return bk.id===window._selAnn.bookId;});
-    if(b){
-      b.annotations=(b.annotations||[]).filter(function(a){return a.id!==window._selAnn.annId;});
-      saveBooks();
-      window._selAnn=null;
-      renderAnnotations(b);
-      toast('标注已删除');
-    }
-    e.preventDefault();
-  }
-  // Deselect on Escape
-  if(e.key==='Escape'&&window._selAnn){
-    document.querySelectorAll('.ann-mark.selected').forEach(function(s){s.classList.remove('selected');});
-    window._selAnn=null;
-  }
-});
 
-// Click on document background to deselect
-document.addEventListener('click',function(e){
-  if(!e.target.closest('.ann-mark')&&window._selAnn){
-    document.querySelectorAll('.ann-mark.selected').forEach(function(s){s.classList.remove('selected');});
-    window._selAnn=null;
-  }
-});
 
 // ─── Init ───
 function init() {
