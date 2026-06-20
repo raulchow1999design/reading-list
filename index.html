@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Reading List — 我的书单</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
@@ -28,7 +28,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: antialiased; -webkit-user-select:none; user-select:none;
 }
 
 /* ─── Sidebar ─── */
@@ -377,7 +377,9 @@ body {
   font-size:14px; font-family:inherit; outline:none; transition:border 0.15s;
 }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--accent); }
-.form-group textarea { resize:vertical; min-height:80px; line-height:1.5; }
+.form-group textarea { resize:vertical; min-height:80px; line-height:1.5; -webkit-user-select:text; user-select:text; }
+.form-group input { -webkit-user-select:text; user-select:text; }
+.cat-add-input { -webkit-user-select:text; user-select:text; }
 .form-row { display:flex; gap:12px; }
 .form-row>* { flex:1; }
 
