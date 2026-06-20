@@ -1056,7 +1056,7 @@ function openNoteEditor(noteId) {
       <div class="form-group"><label>页码</label><input type="number" id="noteEditPage" value="${note.pageNumber||1}" min="1"></div>
       <div class="form-group"><label>颜色</label>
         <div style="display:flex;gap:6px;align-items:center;height:40px;">${
-          ['yellow','pink','blue','green','lavender'].map(c=>\`<div class="ncm-\${c}" onclick="window._pkv='\${c}';this.parentElement.querySelectorAll('.ncm-'+window._pkv).forEach(s=>s.style.borderColor='transparent');this.style.borderColor='var(--accent)';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-\${c});border:3px solid \${(note.color||'yellow')===c?'var(--accent)':'transparent'};" title="\${c}"></div>\`).join('')
+          ['yellow','pink','blue','green','lavender'].map(function(c){var sel=(note.color||'yellow')===c?'var(--accent)':'transparent';return '<div class="ncm-'+c+'" onclick="window._pkv=\''+c+'\';var s=this.parentElement.querySelectorAll(\'.ncm-'+window._pkv+'\');s.forEach(function(x){x.style.borderColor=\'transparent\';});this.style.borderColor=\'var(--accent)\';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-'+c+');border:3px solid '+sel+';" title="'+c+'"></div>';}).join('')
         }</div>
       </div>
     </div>
