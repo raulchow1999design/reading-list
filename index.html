@@ -324,10 +324,8 @@ body {
 }
 .annotation-toolbar:hover { opacity:1; }
 
-/* Keep toolbar inside doc-viewer, not overlapping notes panel */
-.doc-viewer { position:relative; }
-
 /* Hide toolbar when reading view is not active */
+.reading-view:not(.active) .annotation-toolbar { display:none !important; }
 
 .ann-btn {
   width:34px; height:34px; border-radius:50%; border:1px solid var(--border);
