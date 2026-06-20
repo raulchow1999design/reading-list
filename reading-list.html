@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reading List — 我的书单</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <style>
 :root {
   color-scheme: light;
@@ -214,12 +212,6 @@ body {
 .reading-toolbar .page-nav button:hover { background:var(--border-light); }
 
 .reading-body { flex:1; display:flex; overflow:hidden; position:relative; }
-
-/* ─── PDF.js rendered pages ─── */
-.pdf-page-wrapper { position:relative; margin:12px auto; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:inline-block; }
-.pdf-page-wrapper canvas { display:block; }
-.pdf-loading { text-align:center; padding:40px; color:var(--text-secondary); font-size:14px; }
-
 .doc-viewer {
   flex:1; overflow:auto; position:relative; background:#fafafa;
   border-right:1px solid var(--border-light); padding:0;
@@ -279,9 +271,6 @@ body {
   border-radius:3px; color:var(--text-tertiary);
 }
 .note-item-actions button:hover { background:rgba(0,0,0,0.08); color:var(--text); }
-.note-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:3px; }
-.note-tag { font-size:10px; background:rgba(0,0,0,0.07); color:var(--text-secondary); padding:1px 6px; border-radius:8px; cursor:pointer; }
-.note-tag:hover { background:var(--accent); color:#fff; }
 
 /* Sticky note overlay on document */
 .sticky-overlay {
@@ -467,13 +456,7 @@ body {
   .modal { width:95vw; padding:20px; }
   .reading-body { flex-direction:column; }
   .notes-panel { width:100% !important; max-height:200px; }
-  
-/* ─── PDF.js rendered pages ─── */
-.pdf-page-wrapper { position:relative; margin:12px auto; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:inline-block; }
-.pdf-page-wrapper canvas { display:block; }
-.pdf-loading { text-align:center; padding:40px; color:var(--text-secondary); font-size:14px; }
-
-.doc-viewer { min-height:300px; }
+  .doc-viewer { min-height:300px; }
 }
 </style>
 </head>
@@ -740,72 +723,36 @@ function setFilter(filter, category) {
 }
 
 function searchNotes() {
-  const q=(document.getElementById('noteSearchInput')?.value||'').trim();
+  const q=(document.getElementById('noteSearchInput')?.value||'').toLowerCase().trim();
   noteSearchQuery=q;
   const container=document.getElementById('noteSearchResults');
   if (!q) {
     container.innerHTML='<div class="note-search-hint" style="padding:6px 0;font-size:11px;color:var(--text-tertiary);text-align:center;">'+(books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)===0?'还没有便签笔记':'输入关键词搜索所有书籍中的便签')+'</div>';
     return;
   }
-  const ql=q.toLowerCase();
-  // Check if tag: prefix
-  if(ql.startsWith('tag:')){
-    searchNotesByTag(q.slice(4));
-    return;
-  }
+
   const results=[];
   books.forEach(b=>{
     (b.stickyNotes||[]).forEach(n=>{
-      if ((n.text||'').toLowerCase().includes(ql)||(n.tags||[]).some(function(t){return t.toLowerCase().includes(ql);})) {
+      if ((n.text||'').toLowerCase().includes(q)) {
         results.push({book:b, note:n});
       }
     });
   });
+
   if (!results.length) {
     container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🔍 未找到匹配的便签<br><small style="color:var(--text-tertiary);">共搜索了 '+books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)+' 条便签</small></div>';
     return;
   }
-  results.sort(function(a,b){return new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0);});
-  container.innerHTML=results.map(function(r){
-    var tagsHtml=(r.note.tags||[]).length?' · '+r.note.tags.map(function(t){return '#'+t;}).join(' '):'';
-    return '<div class="note-search-result" onclick="openReadingView(\''+r.book.id+'\')">'
-      +'<div class="ns-book">📖 '+r.book.title+' '+tagsHtml+'</div>'
-      +'<div class="ns-text">'+(r.note.text||'').slice(0,80)+((r.note.text||'').length>80?'…':'')+'</div>'
-      +'<div class="ns-date">'+(r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):'')+' · 第'+(r.note.pageNumber||1)+'页</div>'
-      +'</div>';
-  }).join('');
-}
 
-function searchNotesByTag(tag){
-  var container=document.getElementById('noteSearchResults');
-  if(!container) return;
-  var results=[];
-  var tagl=tag.trim().toLowerCase();
-  books.forEach(function(b){
-    (b.stickyNotes||[]).forEach(function(n){
-      if((n.tags||[]).some(function(t){return t.toLowerCase()===tagl;})){
-        results.push({book:b,note:n});
-      }
-    });
-  });
-  if(!results.length){
-    container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🏷️ 没有标签为「'+tag+'」的便签</div>';
-    return;
-  }
-  results.sort(function(a,b){return new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0);});
-  container.innerHTML='<div style="padding:4px 20px 8px;font-size:11px;color:var(--text-secondary);">🏷️ 标签: <strong>'+tag+'</strong> ('+results.length+'条)</div>'+results.map(function(r){
-    return '<div class="note-search-result" onclick="openReadingView(\''+r.book.id+'\')">'
-      +'<div class="ns-book">📖 '+ (r.book.title||'未命名') +'</div>'
-      +'<div class="ns-text">'+(r.note.text||'').slice(0,80)+((r.note.text||'').length>80?'…':'')+'</div>'
-      +'<div class="ns-date">'+(r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):'')+' · 第'+(r.note.pageNumber||1)+'页</div>'
-      +'</div>';
-  }).join('');
-}
-
-// 从便签面板点标签调用
-function searchTagNote(tag){
-  document.getElementById('noteSearchInput').value='tag:'+tag;
-  searchNotes();
+  results.sort((a,b)=>new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0));
+  container.innerHTML=results.map(r=>`
+    <div class="note-search-result" onclick="openReadingView('${r.book.id}')">
+      <div class="ns-book">📖 ${r.book.title||'未命名'}</div>
+      <div class="ns-text">${(r.note.text||'').slice(0,80)}${(r.note.text||'').length>80?'…':''}</div>
+      <div class="ns-date">${r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):''} · 第${r.note.pageNumber||1}页</div>
+    </div>
+  `).join('');
 }
 
 // ─── Book Rendering ───
@@ -905,7 +852,12 @@ function openReadingView(bookId) {
       const ab=new ArrayBuffer(byteString.length);
       const ia=new Uint8Array(ab);
       for(let i=0;i<byteString.length;i++) ia[i]=byteString.charCodeAt(i);
-      renderPDF(ab, viewer, stickyContainer, b);
+      const blobUrl=URL.createObjectURL(new Blob([ab],{type:'application/pdf'}));
+      const iframe=document.createElement('iframe');
+      iframe.src=blobUrl;
+      iframe.style.cssText='width:100%;height:100%;min-height:600px;border:none;';
+      viewer.insertBefore(iframe, stickyContainer);
+      setTimeout(()=>URL.revokeObjectURL(blobUrl),30000);
     } else if (file.name.toLowerCase().endsWith('.docx')) {
       renderDocx(file.dataUrl, viewer, stickyContainer);
     }
@@ -949,7 +901,7 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
 }
 
 function isPDFViewDoc(){
-  return !!document.querySelector('#docViewer .pdf-canvas');
+  return !!document.querySelector('#docViewer iframe');
 }
 
 function renderStickyOverlays(b) {
@@ -1054,7 +1006,6 @@ function renderNotesList(b) {
   list.innerHTML=notes.map(n=>`
     <div class="sticky-note-item note-color-${n.color||'yellow'}" data-note-id="${n.id}" onclick="focusStickyNote('${n.id}')">
       <div>${(n.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
-      ${(n.tags||[]).length?`<div class="note-tags">${n.tags.map(function(t){return '<span class="note-tag" onclick="event.stopPropagation();searchTagNote(\''+t+'\')">'+t+'</span>';}).join('')}</div>`:''}
       <div class="note-item-meta">
         <span class="note-item-page">第${n.pageNumber||1}页 · ${n.createdAt?new Date(n.createdAt).toLocaleDateString('zh-CN'):''}</span>
         <div class="note-item-actions">
@@ -1073,7 +1024,7 @@ function createStickyNote() {
   const note={
     id:uid(), text:'', color:['yellow','pink','blue','green','lavender'][Math.floor(Math.random()*5)],
     position:{x:20+Math.random()*200,y:20+Math.random()*200}, pageNumber:currentPage,
-    tags:[], isTransparent:false, createdAt:new Date().toISOString()
+    isTransparent:false, createdAt:new Date().toISOString()
   };
   b.readingProgress.currentPage=Math.max(1,currentPage);
   saveBooks();
@@ -1105,11 +1056,10 @@ function openNoteEditor(noteId) {
       <div class="form-group"><label>页码</label><input type="number" id="noteEditPage" value="${note.pageNumber||1}" min="1"></div>
       <div class="form-group"><label>颜色</label>
         <div style="display:flex;gap:6px;align-items:center;height:40px;">${
-          ['yellow','pink','blue','green','lavender'].map(function(c){var sel=(note.color||'yellow')===c?'var(--accent)':'transparent';return '<div class="ncm-'+c+'" onclick="window._pkv=\''+c+'\';var s=this.parentElement.querySelectorAll(\'.ncm-'+window._pkv+'\');s.forEach(function(x){x.style.borderColor=\'transparent\';});this.style.borderColor=\'var(--accent)\';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-'+c+');border:3px solid '+sel+';" title="'+c+'"></div>';}).join('')
+          ['yellow','pink','blue','green','lavender'].map(c=>\`<div class="ncm-\${c}" onclick="window._pkv='\${c}';this.parentElement.querySelectorAll('.ncm-'+window._pkv).forEach(s=>s.style.borderColor='transparent');this.style.borderColor='var(--accent)';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-\${c});border:3px solid \${(note.color||'yellow')===c?'var(--accent)':'transparent'};" title="\${c}"></div>\`).join('')
         }</div>
       </div>
     </div>
-    <div class="form-group"><label>标签（逗号分隔，如：重要,好句,思考）</label><input type="text" id="noteEditTags" value="${(note.tags||[]).join(', ').replace(/"/g,'&quot;')}" placeholder="重要, 好句, 思考"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="this.closest('.overlay').remove()">取消</button>
       <button class="btn-save" onclick="saveNoteEdit('${noteId}')">保存</button>
@@ -1128,8 +1078,6 @@ function saveNoteEdit(noteId){
   const pg=parseInt(document.getElementById('noteEditPage')?.value);
   if(pg>0) note.pageNumber=pg;
   if(window._pkv) note.color=window._pkv;
-  const tagStr=document.getElementById('noteEditTags')?.value||'';
-  note.tags=tagStr.split(',').map(function(t){return t.trim();}).filter(Boolean);
   window._pkv=null;
   saveBooks();
   if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
@@ -1202,7 +1150,6 @@ function goToPage() {
 function closeReading() {
   document.getElementById('readingView').classList.remove('active');
   document.getElementById('mainGrid').style.display='flex';
-  _pdfDoc=null; _pdfCurrentPage=1;
   currentBookId=null;
   renderSidebar(); renderBooks();
 }
@@ -1533,7 +1480,7 @@ function getAnnLabel(type){
 }
 
 function renderAnnotations(b) {
-  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer .pdf-page-wrapper');
+  const docContent=document.querySelector('.doc-loaded') || document.querySelector('#docViewer embed') || document.querySelector('#docViewer iframe');
   if(!docContent) return;
   docContent.querySelectorAll('.ann-mark').forEach(el=>el.remove());
   const currentPage=parseInt(document.getElementById('pageInput').value)||1;
@@ -1588,114 +1535,6 @@ function renderAnnotations(b) {
 
     docContent.appendChild(el);
   });
-}
-
-
-// ─── PDF.js Renderer ─────────────────────────────────────────
-let _pdfDoc=null, _pdfCurrentPage=1;
-
-async function renderPDF(data, viewer, stickyContainer, book){
-  stickyContainer.style.display='block';
-  const loading=document.createElement('div');
-  loading.className='pdf-loading';
-  loading.textContent='⏳ 正在加载 PDF…';
-  viewer.insertBefore(loading, stickyContainer);
-
-  try{
-    const pdf=await pdfjsLib.getDocument({data}).promise;
-    _pdfDoc=pdf;
-    _pdfCurrentPage=1;
-    // Update total pages
-    if(!book.readingProgress) book.readingProgress={};
-    book.readingProgress.totalPages=pdf.numPages;
-    book.readingProgress.currentPage=1;
-    book.readingProgress.percentage=Math.round(1/pdf.numPages*100);
-    saveBooks();
-    document.getElementById('pageTotal').textContent='/ '+pdf.numPages;
-    document.getElementById('pageInput').value=1;
-    document.getElementById('progressPercent').textContent=Math.round(1/pdf.numPages*100)+'%';
-    loading.remove();
-    await renderPDFPage(1);
-  }catch(e){
-    loading.textContent='❌ PDF 加载失败: '+e.message;
-    console.error('PDF error:',e);
-  }
-}
-
-async async function renderPDFPage(pageNum){
-  if(!_pdfDoc) return;
-  _pdfCurrentPage=pageNum;
-  document.getElementById('pageInput').value=pageNum;
-  const total=_pdfDoc.numPages;
-  document.getElementById('pageTotal').textContent='/ '+total;
-  document.getElementById('progressPercent').textContent=Math.round(pageNum/total*100)+'%';
-
-  const viewer=document.getElementById('docViewer');
-  // Remove old page wrapper
-  viewer.querySelectorAll('.pdf-page-wrapper,.pdf-loading').forEach(el=>el.remove());
-
-  const loading=document.createElement('div');
-  loading.className='pdf-loading';
-  loading.textContent='⏳ 渲染第 '+pageNum+' 页…';
-  const stickyContainer=document.getElementById('stickyContainer');
-  viewer.insertBefore(loading, stickyContainer);
-
-  try{
-    const page=await _pdfDoc.getPage(pageNum);
-    const scale=1.2;
-    const viewport=page.getViewport({scale});
-    const canvas=document.createElement('canvas');
-    canvas.className='pdf-canvas';
-    const ctx=canvas.getContext('2d');
-    canvas.width=viewport.width;
-    canvas.height=viewport.height;
-
-    const wrapper=document.createElement('div');
-    wrapper.className='pdf-page-wrapper';
-    wrapper.style.width=viewport.width+'px';
-    wrapper.style.height=viewport.height+'px';
-    wrapper.appendChild(canvas);
-
-    await page.render({canvasContext:ctx, viewport}).promise;
-    loading.remove();
-    viewer.insertBefore(wrapper, stickyContainer);
-
-    // Re-render annotations for this page
-    const b=books.find(bk=>bk.id===currentBookId);
-    if(b) renderAnnotations(b);
-
-    // Save reading progress
-    const bk=books.find(bk=>bk.id===currentBookId);
-    if(bk){
-      if(!bk.readingProgress) bk.readingProgress={};
-      bk.readingProgress.currentPage=pageNum;
-      bk.readingProgress.totalPages=total;
-      bk.readingProgress.percentage=Math.round(pageNum/total*100);
-      saveBooks();
-    }
-  }catch(e){
-    loading.textContent='❌ 渲染失败: '+e.message;
-    console.error('Page render error:',e);
-  }
-}
-
-// Override changePage to use pdf.js
-function changePagePDF(delta){
-  if(!_pdfDoc) return;
-  const newPage=Math.max(1,Math.min(_pdfDoc.numPages,_pdfCurrentPage+delta));
-  renderPDFPage(newPage);
-  // Re-render sticky overlays
-  const b=books.find(bk=>bk.id===currentBookId);
-  if(b){renderStickyOverlays(b);renderNotesList(b);}
-}
-
-function goToPagePDF(){
-  if(!_pdfDoc) return;
-  const p=parseInt(document.getElementById('pageInput').value)||1;
-  const newPage=Math.max(1,Math.min(_pdfDoc.numPages,p));
-  renderPDFPage(newPage);
-  const b=books.find(bk=>bk.id===currentBookId);
-  if(b){renderStickyOverlays(b);renderNotesList(b);}
 }
 
 // ─── Init ───
