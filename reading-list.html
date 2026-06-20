@@ -1492,6 +1492,7 @@ function showStats() {
 // ─── Keyboard shortcuts ───
 document.addEventListener('keydown',function(e){
   if((e.metaKey||e.ctrlKey)&&e.key==='n'){e.preventDefault();openAddModal();}
+  if((e.metaKey||e.ctrlKey)&&e.key==='f'){e.preventDefault();}
   if(e.key==='Escape'){closeModal();if(currentBookId)closeReading();}
 });
 
