@@ -1595,7 +1595,7 @@ function renderAnnotations(b) {
     });
     document.addEventListener('mousemove',function(e){
       if(!dragging) return;
-      if(Math.abs(e.clientX-sx)>2||Math.abs(e.clientY-sy)>2) hasMoved=true;
+      if(Math.abs(e.clientX-sx)>4||Math.abs(e.clientY-sy)>4) hasMoved=true;
       el.style.left=(ox+e.clientX-sx)+'px';
       el.style.top=(oy+e.clientY-sy)+'px';
     });
