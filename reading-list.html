@@ -900,9 +900,44 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
     });
 }
 
+function isPDFView(){
+  return !!document.querySelector('#docViewer iframe');
+}
+
 function renderStickyOverlays(b) {
+  const isPDF=isPDFView();
+  const currentPage=parseInt(document.getElementById('pageInput').value)||1;
+  
+  // --- PDF mode: render notes below the document ---
+  if(isPDF){
+    const pdfContainer=document.getElementById('stickyContainer');
+    pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:50px;align-items:flex-start;';
+    pdfContainer.innerHTML='';
+    const pageNotes=(b.stickyNotes||[]).filter(n=>n.pageNumber===currentPage);
+    const pageLabel=document.createElement('div');
+    pageLabel.style.cssText='width:100%;font-size:12px;color:var(--text-secondary);margin-bottom:2px;';
+    pageLabel.textContent=pageNotes.length?`📝 第 ${currentPage} 页 · ${pageNotes.length} 张便签`:`第 ${currentPage} 页 · 暂无便签`;
+    pdfContainer.appendChild(pageLabel);
+    pageNotes.forEach(note=>{
+      const el=document.createElement('div');
+      el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
+      el.style.cssText='position:relative;display:inline-flex;flex-direction:column;margin:4px;min-width:140px;max-width:220px;';
+      el.setAttribute('data-note-id',note.id);
+      el.innerHTML=`
+        <div class="sticky-page-tag">p.${note.pageNumber||1}</div>
+        <div class="sticky-text">${(note.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
+        <div class="sticky-actions">
+          <button onclick="toggleStickyTransparent('${note.id}')">${note.isTransparent?'👁':'👻'}</button>
+          <button onclick="editStickyNote('${note.id}')">✎</button>
+          <button onclick="deleteStickyNote('${note.id}')">🗑</button>
+        </div>`;
+      pdfContainer.appendChild(el);
+    });
+    return;
+  }
+
+  // --- DOCX mode: overlays on document ---
   const container=document.getElementById('stickyContainer');
-  // Remove existing overlays (keep the note container clean)
   container.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
 
   (b.stickyNotes||[]).forEach(note=>{
@@ -1011,10 +1046,49 @@ function openNoteEditor(noteId) {
   const note=b.stickyNotes.find(n=>n.id===noteId);
   if(!note) return;
 
-  const text=prompt('输入便签内容：',note.text||'');
-  if(text===null) return;
-  note.text=text;
+  if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
+  const overlay=document.createElement('div');
+  overlay.className='overlay';
+  overlay.style.cssText='z-index:150;';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`<div class="modal" style="width:440px;gap:14px;">
+    <h3>📝 编辑便签</h3>
+    <div class="form-group"><label>便签内容</label><textarea id="noteEditText" style="min-height:100px;">${(note.text||'').replace(/</g,'&lt;').replace(/\n/g,'&#10;')}</textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>页码</label><input type="number" id="noteEditPage" value="${note.pageNumber||1}" min="1"></div>
+      <div class="form-group"><label>颜色</label>
+        <div style="display:flex;gap:6px;align-items:center;height:40px;">${
+          ['yellow','pink','blue','green','lavender'].map(c=>\`<div class="note-color-mini color-\${c} \${(note.color||'yellow')===c?'selected':''}" onclick="pickMiniColor('\${c}',this)" style="width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid \${(note.color||'yellow')===c?'var(--accent)':'transparent'};transition:all 0.12s;" title="\${c}"></div>\`).join('')
+        }</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="this.closest('.overlay').remove()">取消</button>
+      <button class="btn-save" onclick="saveNoteEdit('${noteId}')">保存</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  window._noteEditorOverlay=overlay;
+}
+
+function pickMiniColor(color, el){
+  el.parentElement.querySelectorAll('.note-color-mini').forEach(s=>{s.classList.remove('selected');s.style.borderColor='transparent';});
+  el.classList.add('selected');el.style.borderColor='var(--accent)';
+  window._pickedNoteColor=color;
+}
+
+function saveNoteEdit(noteId){
+  const b=books.find(bk=>bk.id===currentBookId);
+  if(!b) return;
+  const note=b.stickyNotes.find(n=>n.id===noteId);
+  if(!note) return;
+  note.text=document.getElementById('noteEditText')?.value||'';
+  const pg=parseInt(document.getElementById('noteEditPage')?.value);
+  if(pg>0) note.pageNumber=pg;
+  if(window._pickedNoteColor) note.color=window._pickedNoteColor;
+  window._pickedNoteColor=null;
   saveBooks();
+  if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
   refreshReadingView();
 }
 function editStickyNote(noteId) { openNoteEditor(noteId); }
