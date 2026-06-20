@@ -271,6 +271,9 @@ body {
   border-radius:3px; color:var(--text-tertiary);
 }
 .note-item-actions button:hover { background:rgba(0,0,0,0.08); color:var(--text); }
+.note-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:3px; }
+.note-tag { font-size:10px; background:rgba(0,0,0,0.07); color:var(--text-secondary); padding:1px 6px; border-radius:8px; cursor:pointer; }
+.note-tag:hover { background:var(--accent); color:#fff; }
 
 /* Sticky note overlay on document */
 .sticky-overlay {
@@ -723,36 +726,70 @@ function setFilter(filter, category) {
 }
 
 function searchNotes() {
-  const q=(document.getElementById('noteSearchInput')?.value||'').toLowerCase().trim();
+  const q=(document.getElementById('noteSearchInput')?.value||'').trim();
   noteSearchQuery=q;
   const container=document.getElementById('noteSearchResults');
   if (!q) {
     container.innerHTML='<div class="note-search-hint" style="padding:6px 0;font-size:11px;color:var(--text-tertiary);text-align:center;">'+(books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)===0?'还没有便签笔记':'输入关键词搜索所有书籍中的便签')+'</div>';
     return;
   }
-
+  const ql=q.toLowerCase();
+  if(ql.startsWith('tag:')){
+    searchNotesByTag(q.slice(4));
+    return;
+  }
   const results=[];
   books.forEach(b=>{
     (b.stickyNotes||[]).forEach(n=>{
-      if ((n.text||'').toLowerCase().includes(q)) {
+      if ((n.text||'').toLowerCase().includes(ql)||(n.tags||[]).some(function(t){return t.toLowerCase().includes(ql);})) {
         results.push({book:b, note:n});
       }
     });
   });
-
   if (!results.length) {
     container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🔍 未找到匹配的便签<br><small style="color:var(--text-tertiary);">共搜索了 '+books.reduce((s,b)=>s+(b.stickyNotes||[]).length,0)+' 条便签</small></div>';
     return;
   }
+  results.sort(function(a,b){return new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0);});
+  container.innerHTML=results.map(function(r){
+    var tagsHtml=(r.note.tags||[]).length?' · '+r.note.tags.map(function(t){return '#'+t;}).join(' '):'';
+    return '<div class="note-search-result" onclick="openReadingView(\''+r.book.id+'\')">'
+      +'<div class="ns-book">📖 '+r.book.title+' '+tagsHtml+'</div>'
+      +'<div class="ns-text">'+(r.note.text||'').slice(0,80)+((r.note.text||'').length>80?'…':'')+'</div>'
+      +'<div class="ns-date">'+(r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):'')+' · 第'+(r.note.pageNumber||1)+'页</div>'
+      +'</div>';
+  }).join('');
+}
 
-  results.sort((a,b)=>new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0));
-  container.innerHTML=results.map(r=>`
-    <div class="note-search-result" onclick="openReadingView('${r.book.id}')">
-      <div class="ns-book">📖 ${r.book.title||'未命名'}</div>
-      <div class="ns-text">${(r.note.text||'').slice(0,80)}${(r.note.text||'').length>80?'…':''}</div>
-      <div class="ns-date">${r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):''} · 第${r.note.pageNumber||1}页</div>
-    </div>
-  `).join('');
+function searchNotesByTag(tag){
+  var container=document.getElementById('noteSearchResults');
+  if(!container) return;
+  var results=[];
+  var tagl=tag.trim().toLowerCase();
+  books.forEach(function(b){
+    (b.stickyNotes||[]).forEach(function(n){
+      if((n.tags||[]).some(function(t){return t.toLowerCase()===tagl;})){
+        results.push({book:b,note:n});
+      }
+    });
+  });
+  if(!results.length){
+    container.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text-secondary);text-align:center;">🏷️ 没有标签为「'+tag+'」的便签</div>';
+    return;
+  }
+  results.sort(function(a,b){return new Date(b.note.createdAt||0)-new Date(a.note.createdAt||0);});
+  container.innerHTML='<div style="padding:4px 20px 8px;font-size:11px;color:var(--text-secondary);">🏷️ 标签: <strong>'+tag+'</strong> ('+results.length+'条)</div>'+results.map(function(r){
+    return '<div class="note-search-result" onclick="openReadingView(\''+r.book.id+'\')">'
+      +'<div class="ns-book">📖 '+ (r.book.title||'未命名') +'</div>'
+      +'<div class="ns-text">'+(r.note.text||'').slice(0,80)+((r.note.text||'').length>80?'…':'')+'</div>'
+      +'<div class="ns-date">'+(r.note.createdAt?new Date(r.note.createdAt).toLocaleDateString('zh-CN'):'')+' · 第'+(r.note.pageNumber||1)+'页</div>'
+      +'</div>';
+  }).join('');
+}
+
+function searchTagNote(tag){
+  document.getElementById('noteSearchInput').value='tag:'+tag;
+  searchNotes();
 }
 
 // ─── Book Rendering ───
@@ -1006,6 +1043,7 @@ function renderNotesList(b) {
   list.innerHTML=notes.map(n=>`
     <div class="sticky-note-item note-color-${n.color||'yellow'}" data-note-id="${n.id}" onclick="focusStickyNote('${n.id}')">
       <div>${(n.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
+      ${(n.tags||[]).length?`<div class="note-tags">${n.tags.map(function(t){return '<span class="note-tag" onclick="event.stopPropagation();searchTagNote(\''+t+'\')">'+t+'</span>';}).join('')}</div>`:''}
       <div class="note-item-meta">
         <span class="note-item-page">第${n.pageNumber||1}页 · ${n.createdAt?new Date(n.createdAt).toLocaleDateString('zh-CN'):''}</span>
         <div class="note-item-actions">
@@ -1024,7 +1062,7 @@ function createStickyNote() {
   const note={
     id:uid(), text:'', color:['yellow','pink','blue','green','lavender'][Math.floor(Math.random()*5)],
     position:{x:20+Math.random()*200,y:20+Math.random()*200}, pageNumber:currentPage,
-    isTransparent:false, createdAt:new Date().toISOString()
+    tags:[], isTransparent:false, createdAt:new Date().toISOString()
   };
   b.readingProgress.currentPage=Math.max(1,currentPage);
   saveBooks();
@@ -1056,10 +1094,11 @@ function openNoteEditor(noteId) {
       <div class="form-group"><label>页码</label><input type="number" id="noteEditPage" value="${note.pageNumber||1}" min="1"></div>
       <div class="form-group"><label>颜色</label>
         <div style="display:flex;gap:6px;align-items:center;height:40px;">${
-          ['yellow','pink','blue','green','lavender'].map(c=>\`<div class="ncm-\${c}" onclick="window._pkv='\${c}';this.parentElement.querySelectorAll('.ncm-'+window._pkv).forEach(s=>s.style.borderColor='transparent');this.style.borderColor='var(--accent)';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-\${c});border:3px solid \${(note.color||'yellow')===c?'var(--accent)':'transparent'};" title="\${c}"></div>\`).join('')
+          ['yellow','pink','blue','green','lavender'].map(function(c){var sel=(note.color||'yellow')===c?'var(--accent)':'transparent';return '<div class="ncm-'+c+'" onclick="window._pkv=\''+c+'\';var s=this.parentElement.querySelectorAll(\'.ncm-'+window._pkv+'\');s.forEach(function(x){x.style.borderColor=\'transparent\';});this.style.borderColor=\'var(--accent)\';" style="width:28px;height:28px;border-radius:50%;cursor:pointer;background:var(--note-'+c+');border:3px solid '+sel+';" title="'+c+'"></div>';}).join('')
         }</div>
       </div>
     </div>
+    <div class="form-group"><label>标签（逗号分隔，如：重要,好句,思考）</label><input type="text" id="noteEditTags" value="${(note.tags||[]).join(', ').replace(/"/g,'&quot;')}" placeholder="重要, 好句, 思考"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="this.closest('.overlay').remove()">取消</button>
       <button class="btn-save" onclick="saveNoteEdit('${noteId}')">保存</button>
@@ -1078,6 +1117,8 @@ function saveNoteEdit(noteId){
   const pg=parseInt(document.getElementById('noteEditPage')?.value);
   if(pg>0) note.pageNumber=pg;
   if(window._pkv) note.color=window._pkv;
+  const tagStr=document.getElementById('noteEditTags')?.value||'';
+  note.tags=tagStr.split(',').map(function(t){return t.trim();}).filter(Boolean);
   window._pkv=null;
   saveBooks();
   if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
