@@ -533,6 +533,7 @@ body {
     <div class="notes-panel" id="notesPanel">
       <div class="notes-panel-header">
         <h4>📝 便签笔记</h4>
+        <span id="stickyPageLabel" style="font-size:11px;color:var(--text-tertiary);margin-left:auto;margin-right:8px;"></span>
         <button onclick="addNoteFromPanel()" title="新建便签">＋</button>
         <button onclick="toggleNotesPanel()" title="折叠">◀</button>
       </div>
@@ -875,6 +876,10 @@ function openReadingView(bookId) {
   renderStickyOverlays(b);
   renderNotesList(b);
   renderAnnotations(b);
+  // For PDF, auto-expand notes panel
+  if(!!document.querySelector('#docViewer iframe')){
+    document.getElementById('notesPanel').classList.remove('collapsed');
+  }
 }
 
 function updateProgressDisplay(b) {
@@ -908,37 +913,61 @@ function renderDocx(dataUrl, viewer, stickyContainer) {
 }
 
 function renderStickyOverlays(b) {
-  // Remove all existing overlays
   document.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
 
   const currentPage=parseInt(document.getElementById('pageInput').value)||1;
   const isPDF=!!document.querySelector('#docViewer iframe');
   const docContent=document.querySelector('.doc-loaded');
 
-  // Pick the right container: doc-loaded for docx, stickyContainer for PDF
   let container;
   if(isPDF){
+    // PDF: just clear the container, notes shown in side panel
     container=document.getElementById('stickyContainer');
-    // Position stickyContainer nicely for PDF — show as a note strip below PDF toolbar
-    container.style.cssText='position:relative;min-height:80px;padding:10px;margin:12px 0;background:rgba(255,255,255,0.7);border-top:1px solid var(--border-light);display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;';
+    container.style.cssText='display:none;';
   } else if(docContent){
     container=docContent;
   } else {
     container=document.getElementById('stickyContainer');
   }
 
-  const pageNotes=(b.stickyNotes||[]).filter(n=>n.pageNumber===currentPage);
-  
-  // Show page indicator for PDF
-  if(isPDF){
-    const label=document.getElementById('stickyPageLabel')||document.createElement('div');
-    label.id='stickyPageLabel';
-    label.style.cssText='width:100%;font-size:11px;color:var(--text-tertiary);margin-bottom:4px;';
-    label.textContent=pageNotes.length?`📝 第 ${currentPage} 页 · ${pageNotes.length} 张便签`:`第 ${currentPage} 页 · 暂无便签`;
-    container.insertBefore(label, container.firstChild);
+  const allNotes=(b.stickyNotes||[]);
+  const pageNotes=isPDF ? allNotes.filter(n=>n.pageNumber===currentPage) : allNotes;
+
+  // Update page label
+  const pageLabel=document.getElementById('stickyPageLabel');
+  if(pageLabel){
+    pageLabel.textContent=pageNotes.length?`第 ${currentPage} 页 · ${pageNotes.length} 张便签`:`第 ${currentPage} 页`;
   }
 
-  pageNotes.forEach(note=>{
+  // For PDF: render notes as a flat list inside stickyContainer below the PDF
+  if(isPDF){
+    const pdfContainer=document.getElementById('stickyContainer');
+    pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:8px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:40px;align-items:flex-start;';
+    pdfContainer.innerHTML='';
+    if(!pageNotes.length){
+      pdfContainer.innerHTML='<span style="font-size:12px;color:var(--text-tertiary);padding:8px;">此页暂无便签</span>';
+    }
+    pageNotes.forEach(note=>{
+      const el=document.createElement('div');
+      el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
+      el.style.cssText='position:relative;display:inline-flex;flex-direction:column;margin:4px;min-width:140px;';
+      el.setAttribute('data-note-id',note.id);
+      el.innerHTML=`
+        <div class="sticky-page-tag" style="font-size:10px;">p.${note.pageNumber||1}</div>
+        <div class="sticky-text">${(note.text||'').replace(/\n/g,'<br>')||'<span style="color:#aaa;">空便签</span>'}</div>
+        <div class="sticky-actions" style="margin-top:4px;">
+          <button onclick="toggleStickyTransparent('${note.id}')">${note.isTransparent?'👁':'👻'}</button>
+          <button onclick="editStickyNote('${note.id}')">✎</button>
+          <button onclick="deleteStickyNote('${note.id}')">🗑</button>
+        </div>`;
+      pdfContainer.appendChild(el);
+    });
+    return;
+  }
+
+  // For DOCX: render overlays on document
+  if(!container) return;
+  allNotes.forEach(note=>{
     const el=document.createElement('div');
     el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
     // For PDF, use inline-block layout; for docx, use absolute
