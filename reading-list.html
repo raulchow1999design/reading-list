@@ -49,7 +49,7 @@ body {
   letter-spacing: 0.04em; color: var(--text-tertiary); padding: 8px 20px 4px;
   display: flex; align-items: center; justify-content: space-between;
 }
-.nav-item {
+.nav-item { -webkit-user-select:none; user-select:none;
   display: flex; align-items: center; gap: 10px; padding: 8px 20px;
   cursor: pointer; font-size: 13px; color: var(--text); transition: all 0.12s;
   border-radius: 0; position: relative;
@@ -67,7 +67,7 @@ body {
 .notes-search-box {
   margin: 0 20px 10px;
 }
-.notes-search-box input {
+.notes-search-box input { -webkit-user-select:text; user-select:text;
   width: 100%; padding: 7px 10px; border: 1px solid var(--border);
   border-radius: var(--radius-xs); font-size: 12px; font-family: inherit;
   background: var(--bg); outline: none; transition: border 0.15s;
@@ -83,7 +83,7 @@ body {
 .note-search-result .ns-date { font-size: 10px; color: var(--text-tertiary); }
 
 .sidebar-footer { display: flex; flex-direction: column; gap: 6px; }
-.sidebar-footer button {
+.sidebar-footer button { -webkit-user-select:none; user-select:none;
   width: 100%; padding: 9px 12px; border: 1px solid var(--border);
   background: var(--card-bg); border-radius: var(--radius-xs); font-size: 13px;
   cursor: pointer; color: var(--text); font-family: inherit;
@@ -100,7 +100,7 @@ body {
   gap:12px; border-bottom:1px solid var(--border-light); background:var(--card-bg); flex-shrink:0;
 }
 .toolbar h2 { font-size:17px; font-weight:600; flex:1; }
-.toolbar .search-input {
+.toolbar .search-input { -webkit-user-select:text; user-select:text;
   width:220px; padding:7px 12px; border:1px solid var(--border);
   border-radius:var(--radius-xs); font-size:13px; font-family:inherit;
   background:var(--bg); outline:none;
@@ -399,14 +399,14 @@ body {
 
 .form-group { display:flex; flex-direction:column; gap:6px; }
 .form-group label { font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.03em; }
-.form-group input, .form-group textarea, .form-group select {
+.form-group input, .form-group textarea, .form-group select { -webkit-user-select:text; user-select:text;
   padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-xs);
   font-size:14px; font-family:inherit; outline:none; transition:border 0.15s;
 }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--accent); }
 .form-group textarea { resize:vertical; min-height:80px; line-height:1.5; -webkit-user-select:text; user-select:text; }
 .form-group input { -webkit-user-select:text; user-select:text; }
-.cat-add-input { -webkit-user-select:text; user-select:text; }
+.cat-add-input { -webkit-user-select:text; user-select:text; -webkit-user-select:text; user-select:text; }
 .form-row { display:flex; gap:12px; }
 .form-row>* { flex:1; }
 
@@ -440,7 +440,7 @@ body {
   background:var(--accent); color:#fff; padding:3px 8px; border-radius:12px; font-weight:500;
 }
 .cat-chip .remove { cursor:pointer; font-size:14px; line-height:1; opacity:0.8; }
-.cat-add-input {
+.cat-add-input { -webkit-user-select:text; user-select:text;
   padding:4px 8px; border:1px dashed var(--border); border-radius:12px;
   font-size:12px; font-family:inherit; outline:none; width:100px;
 }
