@@ -344,6 +344,7 @@ body {
 .ann-cross:hover { background:#ffe5e5; border-color:#ff3b30; }
 .ann-circle:hover { background:var(--blue-bg); border-color:var(--accent); }
 .ann-scribble:hover { background:#ffe5e5; border-color:#f5a623; }
+.ann-bookmark:hover { background:#e8f8ed; border-color:var(--green); }
 .ann-trash:hover { background:#ffe5e5; border-color:#ff3b30; }
 
 /* ─── Annotation Marks on Document ─── */
@@ -549,6 +550,7 @@ body {
           <button class="ann-btn ann-cross" onclick="addAnnotation('cross')" title="红色叉叉">❌</button>
           <button class="ann-btn ann-circle" onclick="addAnnotation('circle')" title="蓝色圆圈">🔵</button>
           <button class="ann-btn ann-scribble" onclick="addAnnotation('scribble')" title="红色手绘圈">🖍️</button>
+          <button class="ann-btn ann-bookmark" onclick="addAnnotation('bookmark')" title="绿色书签">🔖</button>
           <div class="trash-bin" id="trashBin" onclick="clickTrashDelete()" title="拖拽标注到这里或点击删除">🗑</div>
         </div>
         
@@ -1624,7 +1626,7 @@ function addAnnotation(type) {
   const ann={
     id:uid(), type:type,
     x:30+Math.random()*250, y:30+Math.random()*350,
-    size:type==='scribble'?64:44,
+    size:type==='scribble'?64:(type==='bookmark'?36:44),
     pageNumber:parseInt(document.getElementById('pageInput').value)||1
   };
   b.annotations.push(ann);
@@ -1634,7 +1636,7 @@ function addAnnotation(type) {
 }
 
 function getAnnLabel(type){
-  const m={'exclaim':'❗红色感叹号','check':'✅绿色打钩','cross':'❌红色叉叉','circle':'🔵蓝色圆圈','scribble':'🖍️红色手绘圈'};
+  const m={'exclaim':'❗红色感叹号','check':'✅绿色打钩','cross':'❌红色叉叉','circle':'🔵蓝色圆圈','scribble':'🖍️红色手绘圈','bookmark':'🔖绿色书签'};
   return m[type]||'标记';
 }
 
@@ -1664,6 +1666,8 @@ function renderAnnotations(b) {
       el.innerHTML+=`<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="22" fill="rgba(52,199,89,0.08)" stroke="#34c759" stroke-width="2.8" opacity="0.6"/><polyline points="12,24 20,33 38,16" fill="none" stroke="#34c759" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg>`;
     } else if(ann.type==='cross'){
       el.innerHTML+=`<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><circle cx="24" cy="24" r="22" fill="rgba(255,59,48,0.08)" stroke="#ff3b30" stroke-width="2.8" opacity="0.6"/><line x1="13" y1="13" x2="35" y2="35" stroke="#ff3b30" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/><line x1="35" y1="13" x2="13" y2="35" stroke="#ff3b30" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/></svg>`;
+    } else if(ann.type==='bookmark'){
+      el.innerHTML+=`<svg viewBox="0 0 48 48" width="${ann.size}" height="${ann.size}"><path d="M12 6h24v36l-12-8-12 8V6z" fill="rgba(52,199,89,0.15)" stroke="#34c759" stroke-width="2.5" opacity="0.6" stroke-linejoin="round"/><polyline points="16,20 22,27 34,14" fill="none" stroke="#34c759" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.25"/></svg>`;
     }
 
     // Drag support
