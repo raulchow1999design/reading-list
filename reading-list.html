@@ -993,7 +993,10 @@ function renderStickyOverlays(b) {
   const container=document.getElementById('stickyContainer');
   container.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
 
-  const isPDF=isPDFViewDoc();
+  // Remove pageNav from hidden status in reading toolbar
+  var readingPageNav=document.querySelector('#readingView .page-nav');
+  if(readingPageNav) readingPageNav.style.display=isPDF?'none':'flex';
+
   const currentPage=parseInt(document.getElementById('pageInput').value)||1;
   const pdfContainer=document.getElementById('stickyContainer');
 
@@ -1001,6 +1004,11 @@ function renderStickyOverlays(b) {
   const pageNav=document.getElementById('pageNav');
   if(pageNav){
     pageNav.style.display=isPDF?'none':(pageNav.style.display||'flex');
+  }
+
+  // Restore pageNav for DOCX
+  if(pageNav && !isPDF){
+    pageNav.style.display='flex';
   }
 
   if(isPDF){
