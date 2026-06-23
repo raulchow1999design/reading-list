@@ -1019,9 +1019,16 @@ async function openReadingView(bookId) {
     noDoc.style.display='flex';
   }
 
-  renderStickyOverlays(b);
-  renderNotesList(b);
-  renderAnnotations(b);
+  // For DOCX: renderStickyOverlays + renderAnnotations are called inside renderDocx after loading
+  if (!isPDFViewDoc()) {
+    // DOCX: only render notes list now, overlays follow after mammoth completes
+    renderNotesList(b);
+  } else {
+    // PDF: render everything now
+    renderStickyOverlays(b);
+    renderNotesList(b);
+    renderAnnotations(b);
+  }
 
   // Move toolbar and trash bin: PDF → inside stickyContainer, DOCX → inside doc-viewer at top
   const isPDF=!!(b.localFiles||[])[0] && (b.localFiles||[])[0].name.toLowerCase().endsWith('.pdf');
@@ -1058,28 +1065,34 @@ function updateProgressDisplay(b) {
 }
 
 function renderDocx(dataUrl, viewer, stickyContainer) {
-  // Show loading spinner
   var loadingEl=document.createElement('div');
   loadingEl.className='doc-loaded';
   loadingEl.style.cssText='text-align:center;padding:60px 20px;color:var(--text-secondary);font-size:14px;';
   loadingEl.innerHTML='⏳ 正在解析 Word 文档…<br><small style="color:var(--text-tertiary);">大文件可能需要几秒钟</small>';
   viewer.insertBefore(loadingEl, stickyContainer);
 
-  const base64=dataUrl.split(',')[1];
-  const binary=atob(base64);
-  const bytes=new Uint8Array(binary.length);
-  for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  var base64=dataUrl.split(',')[1];
+  var binary=atob(base64);
+  var bytes=new Uint8Array(binary.length);
+  for(var i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
   mammoth.convertToHtml({arrayBuffer:bytes.buffer})
-    .then(result=>{
+    .then(function(result){
       if(loadingEl.parentNode) loadingEl.parentNode.removeChild(loadingEl);
-      const div=document.createElement('div');
+      var div=document.createElement('div');
       div.className='doc-loaded';
       div.innerHTML=result.value;
       viewer.insertBefore(div, stickyContainer);
+      // After DOCX loaded: re-render sticky notes and annotations
+      var bk=books.find(function(bk2){return bk2.id===currentBookId;});
+      if(bk){
+        renderStickyOverlays(bk);
+        renderNotesList(bk);
+        renderAnnotations(bk);
+      }
     })
-    .catch(err=>{
+    .catch(function(err){
       if(loadingEl.parentNode) loadingEl.parentNode.removeChild(loadingEl);
-      const div=document.createElement('div');
+      var div=document.createElement('div');
       div.className='doc-loaded';
       div.innerHTML='<p style="color:#ff3b30;">无法解析该 Word 文档，请确认文件格式为 .docx</p>';
       viewer.insertBefore(div, stickyContainer);
