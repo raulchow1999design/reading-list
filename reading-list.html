@@ -1008,6 +1008,7 @@ function renderStickyOverlays(b) {
   }
 
   (b.stickyNotes||[]).forEach(note=>{
+    const docTarget=document.querySelector('.doc-loaded')||container;
     const el=document.createElement('div');
     el.className='sticky-overlay note-color-'+ (note.color||'yellow') + (note.isTransparent?' transparent':'');
     el.style.left=(note.position?.x||10)+'px';
@@ -1061,7 +1062,7 @@ function renderStickyOverlays(b) {
       }
     });
 
-    container.appendChild(el);
+    docTarget.appendChild(el);
   });
 }
 
