@@ -940,11 +940,17 @@ function openReadingView(bookId) {
   const toolbar=document.getElementById('annotationToolbar');
   if(toolbar){
     if(isPDF){
-      if(!stickyContainer.contains(toolbar)) stickyContainer.insertBefore(toolbar, stickyContainer.firstChild);
+      if(!stickyContainer.contains(toolbar)){
+        stickyContainer.insertBefore(toolbar, stickyContainer.firstChild);
+      }
       toolbar.classList.add('pdf-toolbar');
+      toolbar.style.cssText='display:flex;gap:5px;z-index:15;opacity:0.45;margin-bottom:8px;justify-content:flex-end;';
     } else {
-      if(!viewer.contains(toolbar)) viewer.insertBefore(toolbar, viewer.firstChild);
+      if(!viewer.contains(toolbar)){
+        viewer.insertBefore(toolbar, viewer.firstChild);
+      }
       toolbar.classList.remove('pdf-toolbar');
+      toolbar.style.cssText='';
     }
   }
 }
@@ -998,13 +1004,19 @@ function renderStickyOverlays(b) {
   }
 
   if(isPDF){
-    // PDF mode: nice notebook view below the document
+    // PDF mode: notebook with page navigation
     pdfContainer.style.cssText='display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:2px solid var(--border-light);background:var(--card-bg);min-height:60px;align-items:flex-start;max-height:220px;overflow-y:auto;';
     pdfContainer.innerHTML='';
     const pageNotes=(b.stickyNotes||[]).filter(n=>n.pageNumber===currentPage);
+    const totalNotes=b.stickyNotes?.length||0;
+    const totalPages=Math.max(1,...(b.stickyNotes||[]).map(n=>n.pageNumber||1));
     const pageLabel=document.createElement('div');
     pageLabel.style.cssText='width:100%;font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;';
-    pageLabel.innerHTML=`📒 便签笔记本 · 第 ${currentPage} 页${pageNotes.length?' · '+pageNotes.length+' 张便签':' · 暂无便签'}`;
+    pageLabel.innerHTML=`📒 便签笔记本 · 第 <input type="number" id="notebookPageInput" value="${currentPage}" min="1" max="${totalPages}"
+      style="width:50px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:center;font-family:inherit;"
+      onchange="goToNotebookPage()"> 页 / 共 ${totalPages} 页${pageNotes.length?' · '+pageNotes.length+' 张':''}
+      <button onclick="goToNotebookPage(-1)" style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:12px;">◀</button>
+      <button onclick="goToNotebookPage(1)" style="background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:12px;">▶</button>`;
     pdfContainer.appendChild(pageLabel);
     pageNotes.forEach(note=>{
       const ed=document.createElement('div');
@@ -1214,6 +1226,27 @@ function refreshReadingView() {
 
 function toggleNotesPanel() {
   document.getElementById('notesPanel').classList.toggle('collapsed');
+}
+
+// ─── Notebook page navigation ───────────────────────────────
+function goToNotebookPage(delta){
+  const b=books.find(bk=>bk.id===currentBookId);
+  if(!b) return;
+  var input=document.getElementById('notebookPageInput');
+  var currentVal=parseInt(input?.value)||1;
+  var newPage;
+  if(typeof delta==='number'){
+    newPage=Math.max(1,currentVal+delta);
+  } else {
+    newPage=parseInt(input?.value)||1;
+  }
+  input.value=newPage;
+  b.readingProgress.currentPage=newPage;
+  document.getElementById('pageInput').value=newPage;
+  saveBooks();
+  renderStickyOverlays(b);
+  renderNotesList(b);
+  if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
 }
 
 function changePage(delta) {
