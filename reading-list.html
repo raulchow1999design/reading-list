@@ -1247,12 +1247,13 @@ function goToNotebookPage(delta){
   } else {
     newPage=parseInt(input?.value)||1;
   }
-  input.value=newPage;
+  if(input) input.value=newPage;
   b.readingProgress.currentPage=newPage;
   document.getElementById('pageInput').value=newPage;
   saveBooks();
   renderStickyOverlays(b);
   renderNotesList(b);
+  renderAnnotations(b);
   if(window._noteEditorOverlay) window._noteEditorOverlay.remove();
 }
 
