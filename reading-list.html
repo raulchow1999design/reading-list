@@ -405,8 +405,6 @@ body {
 }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--accent); }
 .form-group textarea { resize:vertical; min-height:80px; line-height:1.5; -webkit-user-select:text; user-select:text; }
-.form-group input { -webkit-user-select:text; user-select:text; }
-.cat-add-input { -webkit-user-select:text; user-select:text; -webkit-user-select:text; user-select:text; }
 .form-row { display:flex; gap:12px; }
 .form-row>* { flex:1; }
 
@@ -440,11 +438,11 @@ body {
   background:var(--accent); color:#fff; padding:3px 8px; border-radius:12px; font-weight:500;
 }
 .cat-chip .remove { cursor:pointer; font-size:14px; line-height:1; opacity:0.8; }
-.cat-add-input { -webkit-user-select:text; user-select:text;
+.cat-add-input {
   padding:4px 8px; border:1px dashed var(--border); border-radius:12px;
   font-size:12px; font-family:inherit; outline:none; width:100px;
-}
-.cat-add-input:focus { border-color:var(--accent); }
+  -webkit-user-select:text; user-select:text;
+}.cat-add-input:focus { border-color:var(--accent); }
 
 .modal-actions { display:flex; gap:10px; justify-content:flex-end; padding-top:8px; border-top:1px solid var(--border-light); }
 .modal-actions button {
