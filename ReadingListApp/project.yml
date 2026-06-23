@@ -1,0 +1,28 @@
+{
+  "targets" : {
+    "ReadingList" : {
+      "type" : "application",
+      "platform" : "macOS",
+      "deploymentTarget" : "14.0",
+      "sources" : [
+        {
+          "path" : "ReadingListApp.swift"
+        }
+      ],
+      "resources" : [
+        {
+          "path" : "reading-list.html"
+        }
+      ],
+      "settings" : {
+        "base" : {
+          "PRODUCT_NAME" : "阅读书单",
+          "PRODUCT_BUNDLE_IDENTIFIER" : "com.readinglist.app",
+          "INFOPLIST_FILE" : "Info.plist",
+          "SWIFT_VERSION" : "5.9",
+          "MACOSX_DEPLOYMENT_TARGET" : "14.0"
+        }
+      }
+    }
+  }
+}
