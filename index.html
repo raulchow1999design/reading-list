@@ -1265,6 +1265,8 @@ function changePage(delta) {
   saveBooks();
   updateProgressDisplay(b);
   renderAnnotations(b);
+  if(isPDFViewDoc()){ renderStickyOverlays(b); renderNotesList(b); }
+  var nbInput=document.getElementById('notebookPageInput'); if(nbInput) nbInput.value=b.readingProgress.currentPage;
 }
 
 function goToPage() {
@@ -1276,6 +1278,10 @@ function goToPage() {
   if(b.readingProgress.totalPages>0) b.readingProgress.percentage=Math.round(b.readingProgress.currentPage/b.readingProgress.totalPages*100);
   saveBooks();
   updateProgressDisplay(b);
+  renderAnnotations(b);
+  // Also refresh notebook view for PDF
+  if(isPDFViewDoc()){ renderStickyOverlays(b); renderNotesList(b); }
+  var nbInput=document.getElementById('notebookPageInput'); if(nbInput) nbInput.value=b.readingProgress.currentPage;
 }
 
 function closeReading() {
