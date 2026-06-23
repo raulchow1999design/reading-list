@@ -1088,6 +1088,8 @@ function isPDFViewDoc(){
 function renderStickyOverlays(b) {
   const container=document.getElementById('stickyContainer');
   container.querySelectorAll('.sticky-overlay').forEach(el=>el.remove());
+  // Also clear overlays from doc-loaded (DOCX mode attaches them there)
+  document.querySelectorAll('.doc-loaded .sticky-overlay').forEach(el=>el.remove());
 
   const isPDF=isPDFViewDoc();
 
