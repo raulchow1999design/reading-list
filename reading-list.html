@@ -1138,7 +1138,8 @@ function renderStickyOverlays(b) {
     return;
   }
 
-  // DOCX: overlay mode - attach to doc-loaded for natural scroll position
+  // DOCX: overlay mode - hide stickyContainer, attach notes to doc-loaded
+  container.style.cssText='display:none;';
   (b.stickyNotes||[]).forEach(note=>{
     const docTarget=document.querySelector('.doc-loaded')||container;
     const el=document.createElement('div');
@@ -1155,26 +1156,11 @@ function renderStickyOverlays(b) {
         <button onclick="deleteStickyNote('${note.id}')" title="删除">🗑</button>
       </div>`;
 
-    // Drag support
-    let dragging=false, startX, startY, origLeft, origTop;
-    // Click on transparent note -> highlight in side panel
-    el.addEventListener('click',function(e){
-      if(e.target.tagName==='BUTTON') return;
-      if(note.isTransparent){
-        const panel=document.getElementById('notesList');
-        const items=panel.querySelectorAll('.sticky-note-item');
-        items.forEach(it=>it.style.boxShadow='');
-        const target=panel.querySelector('[data-note-id="'+note.id+'"]');
-        if(target){
-          target.scrollIntoView({behavior:'smooth',block:'center'});
-          target.style.boxShadow='0 0 0 3px var(--accent)';
-          setTimeout(()=>{target.style.boxShadow='';},2500);
-        }
-      }
-    });
-    // Add data attribute to list items for linking
+    // Drag support with movement threshold
+    var dragging=false, startX, startY, origLeft, origTop, hasMoved;
     el.addEventListener('mousedown',function(e){
       if (e.target.tagName==='BUTTON') return;
+      hasMoved=false;
       dragging=true; startX=e.clientX; startY=e.clientY;
       origLeft=parseInt(el.style.left)||0; origTop=parseInt(el.style.top)||0;
       el.style.zIndex=20;
@@ -1182,15 +1168,28 @@ function renderStickyOverlays(b) {
     });
     document.addEventListener('mousemove',function(e){
       if(!dragging)return;
+      if(Math.abs(e.clientX-startX)>4||Math.abs(e.clientY-startY)>4) hasMoved=true;
       el.style.left=(origLeft+e.clientX-startX)+'px';
       el.style.top=(origTop+e.clientY-startY)+'px';
     });
     document.addEventListener('mouseup',function(){
       if(dragging){
         dragging=false; el.style.zIndex=10;
-        // Save position
-        const b=books.find(bk=>bk.id===currentBookId);
-        if(b){const n=b.stickyNotes.find(nn=>nn.id===note.id);if(n){n.position={x:parseInt(el.style.left),y:parseInt(el.style.top)};saveBooks();}}
+        if(hasMoved){
+          const b=books.find(bk=>bk.id===currentBookId);
+          if(b){const n=b.stickyNotes.find(nn=>nn.id===note.id);if(n){n.position={x:parseInt(el.style.left),y:parseInt(el.style.top)};saveBooks();}}
+        } else {
+          // Click (not drag) — highlight in side panel
+          const panel=document.getElementById('notesList');
+          const items=panel.querySelectorAll('.sticky-note-item');
+          items.forEach(function(it){it.style.boxShadow='';});
+          const target=panel.querySelector('[data-note-id="'+note.id+'"]');
+          if(target){
+            target.scrollIntoView({behavior:'smooth',block:'center'});
+            target.style.boxShadow='0 0 0 3px var(--accent)';
+            setTimeout(function(){target.style.boxShadow='';},2500);
+          }
+        }
       }
     });
 
