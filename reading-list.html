@@ -322,8 +322,12 @@ body {
   backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   flex-wrap:wrap; justify-content:center; float:right;
   box-shadow:0 2px 12px rgba(0,0,0,0.08); border:1px solid rgba(0,0,0,0.06);
+  margin-bottom:8px;
 }
 .annotation-toolbar:hover { opacity:1; }
+
+/* PDF viewer: toolbar inside stickyContainer for visual consistency */
+.pdf-toolbar { margin-bottom:8px; }
 
 /* Hide toolbar when reading view is not active */
 .reading-view:not(.active) .annotation-toolbar { display:none !important; }
@@ -930,6 +934,19 @@ function openReadingView(bookId) {
   renderStickyOverlays(b);
   renderNotesList(b);
   renderAnnotations(b);
+
+  // Move toolbar: PDF → inside stickyContainer, DOCX → inside doc-viewer
+  const isPDF=!!(b.localFiles||[])[0] && (b.localFiles||[])[0].name.toLowerCase().endsWith('.pdf');
+  const toolbar=document.getElementById('annotationToolbar');
+  if(toolbar){
+    if(isPDF){
+      if(!stickyContainer.contains(toolbar)) stickyContainer.insertBefore(toolbar, stickyContainer.firstChild);
+      toolbar.classList.add('pdf-toolbar');
+    } else {
+      if(!viewer.contains(toolbar)) viewer.insertBefore(toolbar, viewer.firstChild);
+      toolbar.classList.remove('pdf-toolbar');
+    }
+  }
 }
 
 function updateProgressDisplay(b) {
