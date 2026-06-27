@@ -987,11 +987,17 @@ async function openReadingView(bookId) {
   const stickyContainer=document.getElementById('stickyContainer');
   const noDoc=document.getElementById('noDocMsg');
   const pullBtn=document.getElementById('pullNoteBtn');
+  const toolbar=document.getElementById('annotationToolbar');
 
   viewer.querySelectorAll('.ann-mark,.sticky-overlay,.doc-loaded,embed,iframe').forEach(el=>el.remove());
   if(!viewer.contains(noDoc)) viewer.appendChild(noDoc);
   if(!viewer.contains(stickyContainer)) viewer.appendChild(stickyContainer);
   if(!viewer.contains(pullBtn)) viewer.appendChild(pullBtn);
+
+  // Always ensure toolbar is in doc-viewer at start (for DOCX)
+  if(toolbar && !viewer.contains(toolbar)){
+    viewer.insertBefore(toolbar, viewer.firstChild);
+  }
 
   if ((b.localFiles||[]).length>0) {
     const file=b.localFiles[0];
@@ -1046,9 +1052,8 @@ async function openReadingView(bookId) {
       // Move trash into toolbar if not already there
       if(trash && !toolbar.contains(trash)) toolbar.appendChild(trash);
     } else {
-      if(!viewer.contains(toolbar)){
-        viewer.insertBefore(toolbar, viewer.firstChild);
-      }
+      // DOCX: ALWAYS force toolbar to doc-viewer firstChild
+      viewer.insertBefore(toolbar, viewer.firstChild);
       toolbar.classList.remove('pdf-toolbar');
       toolbar.style.cssText='position:sticky;top:10px;display:flex;gap:5px;z-index:15;opacity:0.45;width:fit-content;margin-left:auto;margin-right:8px;background:rgba(255,255,255,0.85);border-radius:20px;padding:6px 5px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);flex-wrap:wrap;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);float:right;';
       // Ensure trash is back in toolbar
@@ -1407,6 +1412,9 @@ function closeReading() {
   document.getElementById('mainGrid').style.display='flex';
   window._selAnn=null;
   document.querySelectorAll('.ann-mark').forEach(function(s){s.style.outline='';});
+  // Reset stickyContainer to default state
+  var sc=document.getElementById('stickyContainer');
+  if(sc){ sc.innerHTML=''; sc.style.cssText='position:relative;width:100%;min-height:100%;'; }
   currentBookId=null;
   renderSidebar(); renderBooks();
 }
